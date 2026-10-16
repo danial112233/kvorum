@@ -24,6 +24,7 @@ When several people sign in to Claude with the same login, they share one conver
 - Help inside the chat: the "?" button at the top left and the Help tab in the side panel.
 - `@claude`: a shared assistant answers right in the chat, using the shared memory and people's cards.
 - A personal agent for every member ("Мой агент" at the top left): a private talk, channel summaries, message drafts you send yourself, notes and reminders. It runs on your own Claude. The talk is hidden from guests, but not from others on the shared login. Call someone's agent with `@nickname-агент`.
+- Files from a colleague's computer: "Попросить файл" in the Team panel. Only the computer's owner sends, confirming each file in their own Claude Code; files come only from folders they allowed, and keys, passwords and hidden files never go. The request shows an honest status: waiting for the owner, computer offline, refused, sent, expired.
 - `@nickname`: if that person is offline, their agent answers from the card the person filled in.
 - Work handoff: a "done / next" card you can pass to Claude in a conversation next to the chat.
 - Shared memory that Claude and the agents take into account.
@@ -88,6 +89,7 @@ For voice notes from Claude Code these help but are optional:
 | A guest's message goes out only while a member has the chat open | Guests can't write to the database; a member's page carries their text | Keep the pinned chat open in its own window on a computer that is usually on |
 | A guest reads everything, groups included | Access to the artifact is access to its whole database | Keep passwords and private matters out of the chat. A group only hides itself from the channel list |
 | A colleague's agent answers only while the chat is open somewhere | An open page writes the agent's answer | If there's no answer yet, it comes once someone opens the chat |
+| A file from a colleague's computer comes only while that computer is on | A Claude Code session on their computer sends it, and only with their confirmation | They switch sharing on themselves (skill: "включи выдачу файлов") and can confirm from the phone through Remote Control. A request waits a day |
 | Anyone can sign as anyone | The account is shared and the nickname lives on the device | The chat is meant for a team that trusts each other. A known device only suggests a nickname; it never picks one on its own |
 
 ## License

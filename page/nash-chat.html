@@ -241,6 +241,10 @@ h1 { margin: 0; font-size: var(--t-base); font-weight: 600; line-height: 1.25; }
 .ask-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; font-size: var(--t-xs); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--clay); }
 .ask-foot { display: flex; justify-content: flex-start; margin: 6px 0 2px; }
 .agent-note { margin-bottom: 4px; font-size: var(--t-xs); color: var(--muted); }
+.fetch-st { display: inline-block; margin: 6px 6px 0 0; padding: 2px 10px; border-radius: var(--r-f); background: var(--surface-2); color: var(--muted); font-size: var(--t-xs); font-weight: 600; }
+.row.mine .fetch-st { background: rgba(0, 0, 0, .06); }
+.fetch-st.sent { color: var(--online); }
+.fetch-st.denied, .fetch-st.error { color: var(--danger); }
 
 .dock { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 16px; z-index: 4; }
 .down { width: 44px; height: 44px; border: 0; border-radius: var(--r-f); display: grid; place-items: center; background: var(--surface); color: var(--muted); box-shadow: 0 2px 8px var(--shadow); position: relative; }
@@ -329,7 +333,8 @@ h1 { margin: 0; font-size: var(--t-base); font-weight: 600; line-height: 1.25; }
 .person .st.on { color: var(--online); }
 .person p { margin: 0; font-size: var(--t-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .person p.none { color: var(--muted); }
-.person .pa { display: flex; gap: 6px; margin-top: 4px; }
+.person .pa { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.person .pa .btn-s { white-space: nowrap; }
 
 /* Окна поверх */
 .overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: var(--scrim); }
@@ -791,6 +796,13 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
+        <div class="ctx" id="fetchBar" hidden>
+          <svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          <div class="tx"><b id="fetchWho"></b><span>Он увидит запрос в своём Claude Code и сам решит, какой файл отправить и отправлять ли.</span></div>
+          <button class="xbtn" type="button" id="fetchClose" aria-label="Не просить файл">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
         <div class="ctx" id="editBar" hidden>
           <svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
           <div class="tx"><b>Изменение сообщения</b><span id="editSnip"></span></div>
@@ -1181,7 +1193,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     channels: new Map(), channelsLoaded: false, seenCh: jsonLs("chat.seenCh"), mentionCh: jsonLs("chat.mentionCh"),
     hiddenOpen: false, pendingJump: "", sideKey: "",
     voiceCh: "", voiceDocs: new Map(), voiceBeat: 0, vcInfo: false, callWin: null,
-    guest: false, writeKnown: null, outbox: [], relayed: new Set(), mine: new Set(),
+    guest: false, writeKnown: null, outbox: [], relayed: new Set(), mine: new Set(), hosts: new Map(), fst: new Map(), fetchTo: "",
   };
 
   // ---------- settings (kept on this device) ----------
@@ -1291,7 +1303,8 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   }
 
   // ---------- what the store holds ----------
-  const KINDS = ["text", "handoff", "claude", "agent", "ask", "ack", "del", "react", "pin", "edit", "voice", "circle"];
+  const KINDS = ["text", "handoff", "claude", "agent", "ask", "ack", "del", "react", "pin", "edit", "voice", "circle", "fetch", "fetchst"];
+  const FETCH_ST = ["wait", "denied", "sent", "error", "expired"];
   const EMOJI = ["👍", "❤️", "😂", "🔥", "✅", "👀", "🙏", "😮"];
   function normFiles(arr) {
     const out = [];
@@ -1317,11 +1330,13 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     const o = { id, at, kind, nick: clean(it.nick, 24) || "Без ника", text: typeof it.text === "string" ? it.text.slice(0, 20000) : "" };
     if (kind === "react") { if (!EMOJI.includes(it.emoji)) return null; o.emoji = it.emoji; o.on = it.on !== false; }
     if (kind === "pin") o.on = it.on !== false;
+    if (kind === "fetchst") o.st = FETCH_ST.includes(it.st) ? it.st : "";
     for (const k of ["ref", "reply"]) if (typeof it[k] === "string" && it[k]) o[k] = it[k].slice(0, 64);
     for (const k of ["askedBy", "agentOf", "to"]) if (typeof it[k] === "string" && it[k]) o[k] = clean(it[k], 24);
     if (typeof it.via === "string") o.via = it.via.slice(0, 32);
     if (typeof it.ch === "string" && CH_ID.test(it.ch) && it.ch !== GENERAL) o.ch = it.ch;
     if (typeof it.gid === "string" && /^[a-z0-9]{12}$/.test(it.gid)) o.gid = it.gid;
+    if ((kind === "fetch" || kind === "fetchst") && (it.guest === true || o.via === "guest")) return null;
     if (it.guest === true || o.via === "guest") { o.guest = true; if (!/ \(гость\)$/.test(o.nick)) o.nick = clean(o.nick, 15) + " (гость)"; }
     if (typeof it.uid === "string" && it.uid) o.uid = it.uid.slice(0, 64);
     o.files = normFiles(it.files);
@@ -1352,7 +1367,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   function collect() {
     const bodies = new Map(S.docs);
     for (const [id, d] of S.own) bodies.set(id, d.body);
-    const msgs = new Map(), acks = new Map(), dels = [], reacts = [], pins = [], edits = [];
+    const msgs = new Map(), acks = new Map(), dels = [], reacts = [], pins = [], edits = [], fsts = [];
     for (const b of bodies.values()) {
       const items = b && Array.isArray(b.items) ? b.items : [];
       for (const raw of items) {
@@ -1363,6 +1378,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
         else if (it.kind === "react") { if (it.ref) reacts.push(it); }
         else if (it.kind === "pin") { if (it.ref) pins.push(it); }
         else if (it.kind === "edit") { if (it.ref && it.text.trim()) edits.push(it); }
+        else if (it.kind === "fetchst") { if (it.ref && it.st) fsts.push(it); }
         else msgs.set(it.id, it);
       }
     }
@@ -1405,6 +1421,10 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       pinnedBy.set(c, p.on ? p.ref : cur === p.ref ? "" : cur);
     }
     const pinned = pinnedBy.get(S.ch) || "";
+    const fst = new Map();
+    fsts.sort((a, b) => a.at - b.at);
+    for (const f of fsts) { const m = msgs.get(f.ref); if (m && m.kind === "fetch" && keyOf(f.nick) === keyOf(m.to)) fst.set(f.ref, f); }
+    S.fst = fst;
     const list = [...msgs.values()].sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     return { list, acks, byId: msgs, rx, pinned };
   }
@@ -1512,6 +1532,12 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
         if (S.needWho) resolveWho();
         else if (!S.nick && !$("profileBox").hidden) drawWho();
         setTimeout(rememberDevice, 0);
+      }, () => {});
+      S.db.collection("agenthost").limit(100).onSnapshot((snap) => {
+        const m = new Map();
+        for (const d of snap.docs) { const b = d.data() || {}; const n = clean(b.nick, 24), at = Number(b.at); if (n && Number.isFinite(at)) m.set(keyOf(n), Math.min(at, Date.now())); }
+        S.hosts = m;
+        renderPanel(); render();
       }, () => {});
       S.db.collection("brain").orderBy("at", "desc").limit(300).onSnapshot((snap) => {
         S.brain = snap.docs.map((d) => { const b = d.data() || {}; return { id: d.id, text: clean(b.text, 4000, true), by: clean(b.by, 24), at: Number(b.at) || 0, src: typeof b.src === "string" ? b.src.slice(0, 20) : "" }; }).filter((x) => x.text);
@@ -1649,7 +1675,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   const groupable = (m) => m.kind === "text" || m.kind === "voice";
   function mentionsMe(m) {
     if (!S.nick || m.nick === S.nick) return false;
-    if (m.kind === "ask" && keyOf(m.to) === keyOf(S.nick)) return true;
+    if ((m.kind === "ask" || m.kind === "fetch") && keyOf(m.to) === keyOf(S.nick)) return true;
     return m.text.toLowerCase().includes("@" + keyOf(S.nick));
   }
   function isMine(m) {
@@ -1702,7 +1728,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       const ack = m.kind === "handoff" ? acks.get(m.id) || null : null;
       const rep = m.reply ? byId.get(m.reply) || null : null;
       const state = m.queued ? "q" : S.pending.has(m.id) ? "p" : S.failed.has(m.id) ? "f" : "s";
-      const key = ["m", m.id, first ? 1 : 0, last ? 1 : 0, state, ack ? ack.id : "", isMine(m) ? 1 : 0, mentionsMe(m) ? 1 : 0, S.canWrite ? 1 : 0, S.nick, faceSeed(m.agentOf || m.nick), rep ? rep.id + faceSeed(rep.nick) + (rep.edited || "") : m.reply ? "gone" : "", S.downloads ? 1 : 0, m.kind === "handoff" ? S.canSend : "", listMode ? "L" : "B", rxKey(rx, m.id), m.edited || "", m.id === all.pinned ? "P" : "", q].join("|");
+      const key = ["m", m.id, m.kind === "fetch" ? fetchState(m).t : "", first ? 1 : 0, last ? 1 : 0, state, ack ? ack.id : "", isMine(m) ? 1 : 0, mentionsMe(m) ? 1 : 0, S.canWrite ? 1 : 0, S.nick, faceSeed(m.agentOf || m.nick), rep ? rep.id + faceSeed(rep.nick) + (rep.edited || "") : m.reply ? "gone" : "", S.downloads ? 1 : 0, m.kind === "handoff" ? S.canSend : "", listMode ? "L" : "B", rxKey(rx, m.id), m.edited || "", m.id === all.pinned ? "P" : "", q].join("|");
       try { frag.append(cached(key, used, () => (isBot(m) ? claudeEl(m, rep, rx.get(m.id)) : bubbleEl(m, first, last, ack, rep, rx.get(m.id))))); }
       catch (e) { cache.delete(key); used.delete(key); if (window.console) console.warn("message " + m.id + " not shown", e); }
     }
@@ -1869,6 +1895,12 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       bub.append(nm);
     }
     if (m.kind === "agent") bub.append(h("div", "agent-note", "Ответ агента по карточке и памяти, а не слова самого человека."));
+    if (m.kind === "fetch") {
+      const ah = h("div", "ask-head");
+      ah.innerHTML = ICON.dl;
+      ah.append("Запрос файла · у ", m.to || "—");
+      bub.append(ah);
+    }
     if (m.kind === "ask") {
       const ah = h("div", "ask-head");
       ah.innerHTML = ICON.spark;
@@ -1905,7 +1937,8 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
         more.addEventListener("click", (e) => { e.stopPropagation(); md.classList.remove("clip"); more.remove(); });
         bub.append(more);
       }
-      if (meta) attachMeta(md, meta);
+      if (m.kind === "fetch") { const fs = fetchState(m), el = h("div", "fetch-st " + fs.k, fs.t); bub.append(el); if (meta) { meta.classList.add("inline"); el.after(meta); } }
+      else if (meta) attachMeta(md, meta);
     } else if (!meta) {
       // list layout: the time sits in the name line
     } else if (mediaBox && !docs.length && m.kind === "text" && !rx) {
@@ -3247,6 +3280,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     if (m.kind === "agent") return "[" + t + "] Агент " + (m.agentOf || m.nick) + ": " + m.text;
     if (m.kind === "handoff") { const ho = m.handoff; return "[" + t + "] " + m.nick + " передаёт работу. Проект: " + (ho.project || "—") + ". Сделано: " + (ho.done || "—") + ". Дальше: " + (ho.next || "—") + "." + (m.text ? " Комментарий: " + m.text : ""); }
     if (m.kind === "ask") return "[" + t + "] " + m.nick + " через Claude спрашивает" + (m.to ? " у " + m.to : "") + ": " + m.text;
+    if (m.kind === "fetch") return "[" + t + "] " + m.nick + " просит файл с компьютера " + m.to + ": " + m.text;
     if (m.kind === "circle") return "[" + t + "] " + m.nick + rep + ", кружок " + fmtDur(m.circle.dur) + (V.texts.get(m.id) ? ": " + V.texts.get(m.id) : "");
     if (m.kind === "voice") return "[" + t + "] " + m.nick + (m.via === "claude-code" ? " (из Claude Code)" : "") + rep + ", голосовое " + fmtDur(m.voice.dur) + ": " + (voiceText(m) || "(без расшифровки)");
     return "[" + t + "] " + m.nick + (m.via === "claude-code" ? " (из Claude Code)" : "") + rep + ": " + m.text + files;
@@ -3660,6 +3694,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     ["Голосовые каналы", "«Войти» у канала в разделе «Голосовые» открывает звонок в новой вкладке Jitsi Meet: звук и камера там, а здесь видно, кто внутри. Выйти — кнопкой «Выйти» или закрыв вкладку звонка. Jitsi может попросить того, кто начинает звонок, войти через Google или GitHub."],
     ["Голосовые сообщения и кружки", "Кнопка микрофона. На телефоне в меню «Записать голосовое» и «Записать кружок». iPhone даёт записать звук в чате только через камеру: у голосового картинка не сохраняется, камеру можно закрыть пальцем. Кружок — круглое видео до минуты: после записи он покажется над полем ввода, нажми «Отправить». Пока он сжимается, по кольцу видно, сколько осталось. Если браузер не умеет сжимать, ролик до 20 МБ уйдёт как есть. На компьютере выбери запись, а кружок — через скрепку."],
     ["Мой агент", "Свой агент есть у каждого участника: строка «Мой агент» вверху слева. С ним можно говорить лично: спросить, что было в каналах, попросить черновик сообщения, перевод или план. Агент работает на твоём Claude и видит каналы, которые видишь ты. Сам в чат он не пишет: черновик ты отправляешь кнопкой. Заметки и напоминания он сохраняет у себя, но будить тебя не умеет: напоминания видны, когда откроешь агента. Разговор и заметки скрыты от гостей, но свои под общим входом технически могут их прочитать. Имя и указания агента видят все: по ним он отвечает другим, когда его зовут @ник-агент. У гостей агента нет."],
+    ["Файлы с компьютера коллеги", "В «Команде» у человека, который включил выдачу файлов, есть кнопка «Попросить файл»: напиши, что нужно. Отправить файл может только он сам: запрос появляется в его Claude Code на компьютере, он называет файл и подтверждает. Брать можно только из папок, которые он заранее разрешил; ключи, пароли, скрытые и системные папки не уходят никогда. Под запросом виден честный статус: ждёт подтверждения, компьютер не в сети, отказано, отправлено или истёк (через сутки). Отправленный файл видят все в канале, гости тоже. Гости и агенты файлы просить не могут."],
     ["@упоминания", "@ник зовёт человека: у него появится метка @ и звук. Если человека нет в сети, вместо него ответит его агент по карточке. Карточку каждый заполняет сам: нажми на свою аватарку справа вверху."],
     ["Claude и агенты", "@claude или кнопка «Позвать Claude» — ответит общий помощник. Он знает общую память, карточки людей и переписку этого канала. «Запомнить» у сообщения добавляет его в общую память, её видно на вкладке «Память»."],
     ["Действия с сообщениями", "На компьютере наведи курсор на сообщение, на телефоне подержи на нём палец. Дальше: ответить, реакция, закрепить, изменить или удалить своё. Стрелка вверх в пустом поле — изменить последнее своё сообщение."],
@@ -3727,6 +3762,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
         else {
           const a = btn("btn-s", "Спросить"); a.addEventListener("click", () => { insertMention(n); if (window.innerWidth <= 1000) closePanel(); }); pa.append(a);
           if (ag && !S.guest) { const q = btn("btn-s", "Спросить агента"); q.addEventListener("click", () => { insertMention(n + "-агент"); if (window.innerWidth <= 1000) closePanel(); }); pa.append(q); }
+          if (S.hosts.has(keyOf(n)) && !S.guest && S.canWrite) { const f = btn("btn-s", "Попросить файл"); f.addEventListener("click", () => startFetch(n)); pa.append(f); }
         }
         li.append(pa);
         ul.append(li);
@@ -4229,6 +4265,38 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     const sb = $("avSend");
     sb.setAttribute("aria-label", AG.busy ? "Остановить" : "Отправить агенту");
     sb.innerHTML = AG.busy ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  }
+
+  // ---------- files from a member's computer ----------
+  // A member asks for a file with kind "fetch". Only the owner's own Claude Code session on that computer can answer:
+  // it shows the request to the owner, the owner names the file there, the skill checks it against the folders the
+  // owner allowed and sends it. That session keeps agenthost/<pid> fresh while it runs and writes kind "fetchst".
+  const FETCH_TTL = DAY, HOST_FRESH = 5 * 60000;
+  function fetchState(m) {
+    const st = S.fst && S.fst.get(m.id);
+    const note = st && st.text ? ": " + st.text : "";
+    if (st && st.st === "sent") return { k: "sent", t: "Отправлено" + note };
+    if (st && st.st === "denied") return { k: "denied", t: "Владелец отказал" + note };
+    if (st && st.st === "error") return { k: "error", t: "Не получилось" + note };
+    if ((st && st.st === "expired") || Date.now() - m.at > FETCH_TTL) return { k: "expired", t: "Истёк: за сутки владелец не подтвердил" };
+    const host = S.hosts.get(keyOf(m.to));
+    if (!host) return { k: "nohost", t: "У " + m.to + " не включена выдача файлов. Запрос подождёт сутки" };
+    if (Date.now() - host > HOST_FRESH) return { k: "offline", t: "Компьютер " + m.to + " не в сети. Запрос подождёт сутки" };
+    return { k: "wait", t: "Ждёт подтверждения владельца" + (st && st.st === "wait" ? note : "") };
+  }
+  function startFetch(nick) {
+    if (S.guest || !S.canWrite) { notice("Просить файлы могут только участники чата."); return; }
+    S.fetchTo = nick;
+    $("fetchWho").textContent = "Запрос файла у " + nick;
+    $("fetchBar").hidden = false;
+    syncComposer();
+    if (window.innerWidth <= 1000) closePanel();
+    $("text").focus();
+  }
+  function stopFetch() {
+    S.fetchTo = "";
+    $("fetchBar").hidden = true;
+    syncComposer();
   }
 
   // ---------- guests ----------
@@ -4778,7 +4846,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     $("micBtn").disabled = off || guest || S.busy || !!V.rec;
     $("micBtn").hidden = guest;
     $("quick").hidden = off || guest || S.handoff;
-    $("text").placeholder = S.missing ? "Чат работает только внутри Claude" : guest ? "Сообщение (ты гость: только текст)" : !S.canWrite ? "С этого входа можно только читать" : S.busy ? "Загружаю файлы…" : S.handoff ? "Комментарий к передаче, если нужен" : "Сообщение в " + chTo(S.ch);
+    $("text").placeholder = S.missing ? "Чат работает только внутри Claude" : guest ? "Сообщение (ты гость: только текст)" : !S.canWrite ? "С этого входа можно только читать" : S.busy ? "Загружаю файлы…" : S.fetchTo ? "Какой файл нужен: название, папка, о чём он" : S.handoff ? "Комментарий к передаче, если нужен" : "Сообщение в " + chTo(S.ch);
   }
   function autosize() {
     const ta = $("text");
@@ -5036,6 +5104,15 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       clearTray();
     }
 
+    if (S.fetchTo) {
+      if (S.guest) { stopFetch(); notice("Просить файлы могут только участники чата."); return; }
+      if (!text) { notice("Напиши, какой файл нужен."); return; }
+      const fr = withCh({ id: rid(12), at: Date.now(), kind: "fetch", nick: S.nick, to: S.fetchTo, text }, ch);
+      ta.value = ""; ls.set("chat.draft", ""); autosize();
+      stopFetch();
+      addItem(fr);
+      return;
+    }
     const item = withCh({ id: rid(12), at: Date.now(), kind: ho ? "handoff" : "text", nick: S.nick, text }, ch);
     if (files.length) item.files = files;
     if (S.replyTo) item.reply = S.replyTo;
@@ -5194,6 +5271,9 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     $("pickCircle").addEventListener("click", () => { closeMenus(); if (voiceReady()) $("circleFile").click(); });
     for (const id of ["circleCam", "circleFile"]) $(id).addEventListener("change", () => { const i = $(id), f = i.files && i.files[0]; i.value = ""; closeVoiceMenu(); if (f) prepCircle(f); });
     $("cpSend").addEventListener("click", circleGo);
+    $("fetchClose").addEventListener("click", stopFetch);
+    // statuses that depend on time («не в сети», «истёк») move on by themselves
+    setInterval(() => { if (S.fst && collect().list.some((m) => m.kind === "fetch")) render(); }, 60000);
     $("avBack").addEventListener("click", closeAgent);
     $("avSetBtn").addEventListener("click", () => { AG.set = !AG.set; $("avSetBtn").setAttribute("aria-pressed", AG.set ? "true" : "false"); renderAgent(); });
     $("avSend").addEventListener("click", () => { if (AG.busy) { if (AG.ctl) AG.ctl.abort(); } else askAgent($("avText").value); });
