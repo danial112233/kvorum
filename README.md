@@ -23,6 +23,7 @@ When several people sign in to Claude with the same login, they share one conver
 - Guests from other accounts: they read everything and write text, and their nickname always ends in "(гость)", "guest" (see "Invite people from another account").
 - Help inside the chat: the "?" button at the top left and the Help tab in the side panel.
 - `@claude`: a shared assistant answers right in the chat, using the shared memory and people's cards.
+- A personal agent for every member ("Мой агент" at the top left): a private talk, channel summaries, message drafts you send yourself, notes and reminders. It runs on your own Claude. The talk is hidden from guests, but not from others on the shared login. Call someone's agent with `@nickname-агент`.
 - `@nickname`: if that person is offline, their agent answers from the card the person filled in.
 - Work handoff: a "done / next" card you can pass to Claude in a conversation next to the chat.
 - Shared memory that Claude and the agents take into account.
