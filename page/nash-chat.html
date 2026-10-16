@@ -518,7 +518,8 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
 .help summary::-webkit-details-marker { display: none; }
 .help summary::after { content: "+"; color: var(--muted); font-weight: 500; }
 .help details[open] summary::after { content: "−"; }
-.help details p { margin: 0; padding: 0 12px 12px; font-size: var(--t-sm); line-height: 1.5; color: var(--ink); }
+.help details p { margin: 0; padding: 0 12px 10px; font-size: var(--t-sm); line-height: 1.5; color: var(--ink); }
+.help details p b { font-weight: 600; }
 .side-head .hbtn { display: grid; font-weight: 700; }
 /* Кружки: круглое видео, без звука крутится само, по тапу играет со звуком и рисует кольцо */
 .row.circ .bubble { padding: 0; background: none; box-shadow: none; }
@@ -1330,7 +1331,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     const o = { id, at, kind, nick: clean(it.nick, 24) || "Без ника", text: typeof it.text === "string" ? it.text.slice(0, 20000) : "" };
     if (kind === "react") { if (!EMOJI.includes(it.emoji)) return null; o.emoji = it.emoji; o.on = it.on !== false; }
     if (kind === "pin") o.on = it.on !== false;
-    if (kind === "fetchst") o.st = FETCH_ST.includes(it.st) ? it.st : "";
+    if (kind === "fetchst") { o.st = FETCH_ST.includes(it.st) ? it.st : ""; if (typeof it.msg === "string") o.msg = it.msg.slice(0, 64); }
     for (const k of ["ref", "reply"]) if (typeof it[k] === "string" && it[k]) o[k] = it[k].slice(0, 64);
     for (const k of ["askedBy", "agentOf", "to"]) if (typeof it[k] === "string" && it[k]) o[k] = clean(it[k], 24);
     if (typeof it.via === "string") o.via = it.via.slice(0, 32);
@@ -1425,6 +1426,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     fsts.sort((a, b) => a.at - b.at);
     for (const f of fsts) { const m = msgs.get(f.ref); if (m && m.kind === "fetch" && keyOf(f.nick) === keyOf(m.to)) fst.set(f.ref, f); }
     S.fst = fst;
+    S.fstMsgs = msgs;
     const list = [...msgs.values()].sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     return { list, acks, byId: msgs, rx, pinned };
   }
@@ -3693,8 +3695,8 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     ["Каналы и группы", "Каналы — в списке слева (на телефоне — кнопка ☰). «+ Канал или группа» создаёт новый. Группа видна в списке только её участникам, но это порядок, а не защита: вход общий, а гости читают всё. Ненужный канал можно скрыть у всех и потом вернуть."],
     ["Голосовые каналы", "«Войти» у канала в разделе «Голосовые» открывает звонок в новой вкладке Jitsi Meet: звук и камера там, а здесь видно, кто внутри. Выйти — кнопкой «Выйти» или закрыв вкладку звонка. Jitsi может попросить того, кто начинает звонок, войти через Google или GitHub."],
     ["Голосовые сообщения и кружки", "Кнопка микрофона. На телефоне в меню «Записать голосовое» и «Записать кружок». iPhone даёт записать звук в чате только через камеру: у голосового картинка не сохраняется, камеру можно закрыть пальцем. Кружок — круглое видео до минуты: после записи он покажется над полем ввода, нажми «Отправить». Пока он сжимается, по кольцу видно, сколько осталось. Если браузер не умеет сжимать, ролик до 20 МБ уйдёт как есть. На компьютере выбери запись, а кружок — через скрепку."],
-    ["Мой агент", "Свой агент есть у каждого участника: строка «Мой агент» вверху слева. С ним можно говорить лично: спросить, что было в каналах, попросить черновик сообщения, перевод или план. Агент работает на твоём Claude и видит каналы, которые видишь ты. Сам в чат он не пишет: черновик ты отправляешь кнопкой. Заметки и напоминания он сохраняет у себя, но будить тебя не умеет: напоминания видны, когда откроешь агента. Разговор и заметки скрыты от гостей, но свои под общим входом технически могут их прочитать. Имя и указания агента видят все: по ним он отвечает другим, когда его зовут @ник-агент. У гостей агента нет."],
-    ["Файлы с компьютера коллеги", "В «Команде» у человека, который включил выдачу файлов, есть кнопка «Попросить файл»: напиши, что нужно. Отправить файл может только он сам: запрос появляется в его Claude Code на компьютере, он называет файл и подтверждает. Брать можно только из папок, которые он заранее разрешил; ключи, пароли, скрытые и системные папки не уходят никогда. Под запросом виден честный статус: ждёт подтверждения, компьютер не в сети, отказано, отправлено или истёк (через сутки). Отправленный файл видят все в канале, гости тоже. Гости и агенты файлы просить не могут."],
+    ["Мой агент", "Где: строка «Мой агент» вверху слева. Это личный помощник каждого участника.\nЧто умеет: пересказать каналы, написать черновик, перевести, составить план, запомнить заметку.\nВ чат сам не пишет: черновик ты отправляешь кнопкой «Отправить».\nНа чём работает: на твоём Claude, видит только те каналы, которые видишь ты.\nНапоминания: это заметки, их видно, когда откроешь агента.\nЧужой агент: напиши @ник-агент.\nКто видит разговор: ты и свои под общим входом, гости нет. У гостей агента нет."],
+    ["Файлы с компьютера коллеги", "Попросить: «Команда» → «Попросить файл» у человека → напиши, какой файл нужен.\nКто отправляет: только хозяин компьютера. Запрос приходит в его Claude Code, он сам называет файл и подтверждает.\nВключить у себя (бета): пока лучше не включать. Если очень нужно: папки задаёшь сам в Терминале, а Claude Code на своём компьютере говоришь «включи выдачу файлов в нашем чате». Работает, пока компьютер включён и сессия открыта.\nНикогда не уходят: ключи, пароли, токены, скрытые и системные файлы, а также файлы и архивы, внутри которых похоже на ключ или пароль.\nСтатусы под запросом: ждёт подтверждения · компьютер не в сети · отказано · отправлено · истёк (через сутки).\nКто видит файл: все в канале, гости тоже. Гости и агенты просить файлы не могут."],
     ["@упоминания", "@ник зовёт человека: у него появится метка @ и звук. Если человека нет в сети, вместо него ответит его агент по карточке. Карточку каждый заполняет сам: нажми на свою аватарку справа вверху."],
     ["Claude и агенты", "@claude или кнопка «Позвать Claude» — ответит общий помощник. Он знает общую память, карточки людей и переписку этого канала. «Запомнить» у сообщения добавляет его в общую память, её видно на вкладке «Память»."],
     ["Действия с сообщениями", "На компьютере наведи курсор на сообщение, на телефоне подержи на нём палец. Дальше: ответить, реакция, закрепить, изменить или удалить своё. Стрелка вверх в пустом поле — изменить последнее своё сообщение."],
@@ -3706,7 +3708,13 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     const box = h("div", "help");
     for (const [title, text] of HELP) {
       const d = h("details");
-      d.append(h("summary", null, title), h("p", null, text));
+      d.append(h("summary", null, title));
+      // a section written as short lines shows each as its own paragraph, the words before the colon in bold
+      for (const ln of text.split("\n")) {
+        const para = h("p"), lab = text.includes("\n") ? /^([^:]{2,30}):\s/.exec(ln) : null;
+        if (lab) para.append(h("b", null, lab[1] + ":"), " " + ln.slice(lab[0].length)); else para.textContent = ln;
+        d.append(para);
+      }
       box.append(d);
     }
     pane.append(h("p", "p-intro", "Коротко о том, как всё устроено. Нажми на раздел, чтобы раскрыть."), box);
@@ -4275,7 +4283,8 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   function fetchState(m) {
     const st = S.fst && S.fst.get(m.id);
     const note = st && st.text ? ": " + st.text : "";
-    if (st && st.st === "sent") return { k: "sent", t: "Отправлено" + note };
+    const dm = st && st.st === "sent" && st.msg && S.fstMsgs ? S.fstMsgs.get(st.msg) : null;
+    if (dm && dm.reply === m.id && keyOf(dm.nick) === keyOf(m.to) && dm.files.length) return { k: "sent", t: "Отправлено" + note };
     if (st && st.st === "denied") return { k: "denied", t: "Владелец отказал" + note };
     if (st && st.st === "error") return { k: "error", t: "Не получилось" + note };
     if ((st && st.st === "expired") || Date.now() - m.at > FETCH_TTL) return { k: "expired", t: "Истёк: за сутки владелец не подтвердил" };
