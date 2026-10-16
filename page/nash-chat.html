@@ -1085,7 +1085,10 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     div.querySelectorAll("a[href]").forEach((a) => {
       let host = "";
       try { host = new URL(a.href).hostname.replace(/^www\./, ""); } catch (_) { return; }
-      if (host && !a.textContent.toLowerCase().includes(host.toLowerCase())) a.after(h("span", "lhost", " (" + host + ")"));
+      const t = a.textContent.trim();
+      let shown = "";
+      try { shown = new URL(/^[a-z][a-z0-9+.-]*:/i.test(t) ? t : "https://" + t).hostname.replace(/^www\./, ""); } catch (_) { shown = ""; }
+      if (host && shown.toLowerCase() !== host.toLowerCase()) a.after(h("span", "lhost", " (" + host + ")"));
     });
     div.querySelectorAll("pre").forEach((pre) => {
       const code = pre.querySelector("code") || pre;
@@ -1248,10 +1251,9 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   function normItem(it) {
     if (!it || typeof it !== "object") return null;
     const id = typeof it.id === "string" ? it.id.slice(0, 64) : "";
-    let at = Number(it.at);
-    // a time outside the chat's life would break every date on screen; one slightly ahead (a fast clock) is pulled back
-    if (!id || !Number.isFinite(at) || at < AT_MIN || at > Date.now() + 2 * DAY) return null;
-    at = Math.min(at, Date.now() + AT_AHEAD);
+    const at = Number(it.at);
+    // a time outside the chat's life would break every date on screen; one far ahead waits until its time comes
+    if (!id || !Number.isFinite(at) || at < AT_MIN || at > Date.now() + AT_AHEAD) return null;
     const known = KINDS.includes(it.kind);
     // a kind from a newer page shows as plain text if it carries any; otherwise it is left out
     if (!known && !(typeof it.text === "string" && it.text.trim()) && !(Array.isArray(it.files) && it.files.length)) return null;
@@ -3899,8 +3901,9 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     if (left.length !== S.outbox.length) { S.outbox = left; syncOutbox(); }
   }
   // Names are compared the way they look: Latin letters that look Cyrillic, ё, digits like letters, no spaces or dots.
-  const LOOK = { a: "а", b: "в", c: "с", e: "е", h: "н", k: "к", m: "м", o: "о", p: "р", t: "т", x: "х", y: "у", i: "і", l: "і", "ё": "е", "0": "о", "3": "з", "6": "б", "4": "ч" };
-  const lookKey = (nick) => [...keyOf(nick)].map((ch) => LOOK[ch] || ch).join("").replace(/[^0-9a-zа-яі]/g, "");
+  const LOOK = { a: "а", b: "в", c: "с", e: "е", h: "н", k: "к", m: "м", o: "о", p: "р", t: "т", x: "х", y: "у", i: "і", l: "і", "ё": "е", "0": "о", "3": "з", "6": "б", "4": "ч",
+    "α": "а", "β": "в", "ε": "е", "η": "н", "ι": "і", "κ": "к", "μ": "м", "ο": "о", "ρ": "р", "τ": "т", "υ": "у", "χ": "х", "ν": "v", "ζ": "z", "ѕ": "s", "ј": "j", "і": "і", "ӏ": "і" };
+  const lookKey = (nick) => [...keyOf(String(nick || "").normalize("NFKC"))].map((ch) => LOOK[ch] || ch).join("").replace(/[^0-9a-zа-яі]/g, "");
   const BOTS = ["claude", "клод", "клоуд", "агент", "agent", "админ", "admin", "система", "system"].map((n) => lookKey(n));
   function lookTaken(nick) {
     const k = lookKey(nick);
@@ -3938,7 +3941,8 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     for (const b of S.docs.values()) for (const it of (b && Array.isArray(b.items) ? b.items : [])) if (it && typeof it.id === "string") have.add(it.id);
     for (const p of peers) {
       if (!p || p.kind !== "viewer" || p.sameTab || !p.presence || !Array.isArray(p.presence.outbox)) continue;
-      const uid = String(p.by || p.id || "anon").slice(0, 64);
+      // the connection id changes at will, so a sender without a platform id shares one quota with all such senders
+      const uid = p.by ? String(p.by).slice(0, 64) : "anon";
       for (const raw of p.presence.outbox.slice(0, OUTBOX_MAX)) {
         if (!okOut(raw)) continue;
         const id = guestId(uid, raw.id);
