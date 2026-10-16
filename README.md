@@ -62,7 +62,7 @@ For voice notes from Claude Code these help but are optional:
 
 ## Limitations
 
-- Microphone. Claude doesn't give artifact pages microphone access, so the microphone button opens an audio file picker: record the note with a voice recorder app and pick the file. If the platform opens the microphone later, the button will record directly; the recording code is already there.
+- Microphone. Claude doesn't give artifact pages microphone access. So on a phone the microphone button offers "Record a voice note": an iPhone films a short clip with the camera, the page pulls out the sound and sends only that, and the video goes nowhere. Android opens its voice recorder. You can also pick an existing recording. On a computer the button opens an audio file picker. If the platform opens the microphone later, the button will record directly.
 - The page itself can't transcribe speech. Transcripts come from Claude Code on a computer that has `stt`.
 - A colleague's agent answers only while the chat is open on at least one device.
 - The nickname is stored on the device and the account is shared, so anyone can sign as anyone. The chat is meant for a team that trusts each other.

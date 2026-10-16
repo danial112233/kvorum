@@ -431,6 +431,19 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
 }
 .cl-acts.always { visibility: visible; display: flex; }
 .searchbar input::-webkit-search-cancel-button, .searchbar input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+/* Кто это: выбор себя, когда устройство забыло ник */
+.who { display: grid; gap: 8px; }
+.card .who-t { font-size: var(--t-sm); font-weight: 600; color: var(--ink); }
+.who-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 8px; }
+.who-list button { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 48px; padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink); text-align: left; font-size: var(--t-sm); font-weight: 500; }
+.who-list button:hover { border-color: var(--accent); }
+.who-list button.match { border-color: var(--accent); background: var(--accent-soft); }
+.who-list button > span { display: grid; min-width: 0; }
+.who-list b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.who-list small { font-size: var(--t-xs); font-weight: 400; color: var(--muted); }
+.card .who-or { font-size: var(--t-xs); }
+.nbtns { flex: none; display: flex; gap: 12px; }
+.notice #noticeAct { color: var(--accent); font-weight: 500; }
 
 @media (max-width: 1000px) {
   .panel { position: fixed; inset: 0; z-index: 15; width: auto; border-left: 0; padding-top: env(safe-area-inset-top, 0px); }
@@ -474,6 +487,14 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
 .rectime { flex: none; min-width: 44px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .reclevel { flex: 1; min-width: 0; height: 26px; display: flex; align-items: center; justify-content: flex-end; gap: 2px; overflow: hidden; }
 .reclevel i { flex: none; width: 3px; border-radius: 2px; background: var(--accent); }
+.menu.voice-menu { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); width: min(320px, calc(100% - 24px)); }
+.menu .mi { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 10px; border-radius: var(--r-s); cursor: pointer; font-size: var(--t-sm); color: var(--ink); }
+.menu .mi:hover, .menu .mi:focus-within { background: var(--surface-2); }
+.menu .mi svg { flex: none; color: var(--accent); }
+.menu .mi span { display: grid; gap: 1px; min-width: 0; }
+.menu .mi b { font-weight: 500; }
+.menu .mi small { font-size: var(--t-xs); color: var(--muted); }
+.vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .recdot { animation: none; } }
 .state, .tips .k, .bubble, .cl-card, .notice, .tchip, .mem, .person, .bar, .composer, .panel, .menu, .card, .menu button, .btn-s, .btn.sec, .faces-pick button, .shot, .me, .tab[aria-selected="false"]:hover { color: var(--ink); }
 </style>
@@ -571,8 +592,17 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
         <div class="hintline">До 10 файлов, каждый до 15 МБ. Редкие форматы — в zip.</div>
       </div>
       <div class="menu mentions" id="mentions" hidden role="listbox" aria-label="Кого позвать"></div>
+      <div class="menu voice-menu" id="voiceMenu" hidden>
+        <label class="mi" id="voiceRecItem"><input type="file" class="vh" id="voiceCam" accept="video/*" capture="user">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>
+          <span><b id="voiceRecT">Записать голосовое</b><small id="voiceRecS">Откроется камера, отправится только звук</small></span></label>
+        <label class="mi"><input type="file" class="vh" id="voicePick" accept="audio/*,.m4a,.mp3,.ogg,.opus,.wav,.webm,.aac,.amr">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M10 17a2 2 0 1 1 0-.01M12 17v-6l3 1"/></svg>
+          <span><b>Выбрать запись</b><small>Из диктофона или файлов</small></span></label>
+        <div class="hintline">Записывать прямо в чате Claude пока не даёт.</div>
+      </div>
       <div class="col">
-        <div class="notice" id="notice" role="status" hidden><span id="noticeText"></span><button type="button" id="noticeClose">Скрыть</button></div>
+        <div class="notice" id="notice" role="status" hidden><span id="noticeText"></span><span class="nbtns"><button type="button" id="noticeAct" hidden></button><button type="button" id="noticeClose">Скрыть</button></span></div>
         <div class="typing-line" id="typingLine" hidden></div>
         <div class="ctx" id="replyBar" hidden>
           <svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg>
@@ -621,7 +651,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
           </button>
           <input type="file" id="file" multiple hidden>
           <textarea id="text" rows="1" maxlength="8000" placeholder="Сообщение" aria-label="Сообщение"></textarea>
-          <button class="ibtn" type="button" id="micBtn" aria-label="Записать голосовое" title="Голосовое">
+          <button class="ibtn" type="button" id="micBtn" aria-label="Голосовое" title="Голосовое" aria-haspopup="true" aria-expanded="false" aria-controls="voiceMenu">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>
           </button>
           <input type="file" id="audioFile" accept="audio/*,.m4a,.mp3,.ogg,.opus,.wav,.webm,.aac,.amr" hidden>
@@ -664,6 +694,11 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   <form class="card" id="profileForm" autocomplete="off">
     <h2 id="profileTitle">Как тебя подписывать?</h2>
     <p id="profileIntro">Все здесь заходят под одним аккаунтом, поэтому сообщения подписываются ником. Выбери аватарку, чтобы тебя было легко узнать.</p>
+    <div class="who" id="whoBox" hidden>
+      <p class="who-t">Это ты?</p>
+      <div class="who-list" id="whoList" role="group" aria-label="Выбрать себя"></div>
+      <p class="who-or">Нет в списке — впиши новый ник ниже.</p>
+    </div>
     <label>Ник<input class="field" id="nickInput" maxlength="24" placeholder="Ник"></label>
     <p class="err" id="nickErr" hidden>Напиши хотя бы одну букву.</p>
     <div>
@@ -892,6 +927,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     seen: Number(ls.get("chat.seen")) || 0, unreadFrom: null, maxOther: 0, firstDraw: true,
     hiddenNew: 0, audio: null,
     mentionSeen: Number(ls.get("chat.mentionSeen")) || 0, mentionQueue: [],
+    peopleLoaded: false, needWho: false, deviceSent: "",
   };
 
   // ---------- settings (kept on this device) ----------
@@ -903,12 +939,15 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     { id: "mono", name: "Контраст", light: ["#FFFFFF", "#F0F0F0", "#E0E0E0", "#000000"], dark: ["#000000", "#1E1E1E", "#303030", "#FFFFFF"] },
   ];
   const SET_DEFAULT = { skin: "claude", look: "auto", layout: "bubbles", density: "normal", fs: "m", wall: true, sound: "mentions", enter: "enter", tier: "default", agents: true };
+  function normSettings(v) {
+    const s = Object.assign({}, SET_DEFAULT);
+    if (v && typeof v === "object") for (const k of Object.keys(SET_DEFAULT)) if (typeof v[k] === typeof SET_DEFAULT[k]) s[k] = typeof v[k] === "string" ? v[k].slice(0, 20) : v[k];
+    return s;
+  }
   function loadSettings() {
     let v = {};
     try { v = JSON.parse(ls.get("chat.settings") || "{}") || {}; } catch (_) { v = {}; }
-    const s = Object.assign({}, SET_DEFAULT);
-    for (const k of Object.keys(SET_DEFAULT)) if (typeof v[k] === typeof SET_DEFAULT[k]) s[k] = v[k];
-    return s;
+    return normSettings(v);
   }
   S.set = loadSettings();
   function applySettings() {
@@ -928,6 +967,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     cache.clear();
     render();
     renderPanel();
+    syncPrefs();
   }
   function isDarkNow() {
     if (S.set.look === "dark") return true;
@@ -976,8 +1016,12 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   }
 
   let noticeTimer = 0;
-  function notice(text, sticky) {
+  function notice(text, sticky, act) {
     $("noticeText").textContent = text;
+    const a = $("noticeAct");
+    a.hidden = !act;
+    a.textContent = act ? act.label : "";
+    a.onclick = act ? () => { $("notice").hidden = true; act.fn(); } : null;
     $("notice").hidden = false;
     clearTimeout(noticeTimer);
     if (!sticky) noticeTimer = setTimeout(() => { $("notice").hidden = true; }, 9000);
@@ -1180,10 +1224,14 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
           if (!b || typeof b.nick !== "string") continue;
           const nick = clean(b.nick, 24);
           if (!nick) continue;
-          m.set(keyOf(nick), { nick, face: Number.isFinite(Number(b.face)) ? Number(b.face) >>> 0 : NaN, card: clean(b.card, 3000, true), updatedAt: Number(b.updatedAt) || 0 });
+          m.set(keyOf(nick), { nick, face: Number.isFinite(Number(b.face)) ? Number(b.face) >>> 0 : NaN, card: clean(b.card, 3000, true), updatedAt: Number(b.updatedAt) || 0, devices: deviceKeys(b.devices), prefs: b.prefs && typeof b.prefs === "object" && !Array.isArray(b.prefs) ? b.prefs : null });
         }
         S.people = m;
+        S.peopleLoaded = true;
         syncMe(); renderPeople(); renderPanel(); render();
+        if (S.needWho) resolveWho();
+        else if (!S.nick && !$("profileBox").hidden) drawWho();
+        setTimeout(rememberDevice, 0);
       }, () => {});
       S.db.collection("brain").orderBy("at", "desc").limit(300).onSnapshot((snap) => {
         S.brain = snap.docs.map((d) => { const b = d.data() || {}; return { id: d.id, text: clean(b.text, 4000, true), by: clean(b.by, 24), at: Number(b.at) || 0, src: typeof b.src === "string" ? b.src.slice(0, 20) : "" }; }).filter((x) => x.text);
@@ -1805,6 +1853,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     ls.set("chat.voiceRate", String(r));
     if (V.audio) V.audio.playbackRate = r;
     paintVoice();
+    syncPrefs();
   }
   function encodePeaks(vals) {
     if (!vals.length) return "";
@@ -1944,21 +1993,35 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     });
   }
 
-  // Recording needs the microphone, which the frame may not allow; then the button picks an audio file instead.
+  // Recording needs the microphone, and the frame gets it only if it says so; Safari cannot say, and there a
+  // microphone request may never answer, so the page records only where the frame plainly allows it. Otherwise a
+  // phone gets a menu: film a clip and keep only its sound, or pick a recording; a computer goes to the file picker.
+  const ANDROID = /Android/i.test(navigator.userAgent || "");
   function probeMic() {
     const md = navigator.mediaDevices;
-    let ok = !!(md && typeof md.getUserMedia === "function" && typeof window.MediaRecorder === "function");
-    const fp = document.featurePolicy || document.permissionsPolicy;
-    try { if (ok && fp && typeof fp.allowsFeature === "function" && !fp.allowsFeature("microphone")) ok = false; } catch (_) {}
-    V.mic = ok ? "maybe" : "off";
+    let ok = false;
+    try {
+      const fp = document.featurePolicy || document.permissionsPolicy;
+      ok = !!(md && typeof md.getUserMedia === "function" && typeof window.MediaRecorder === "function" && fp && typeof fp.allowsFeature === "function" && fp.allowsFeature("microphone"));
+    } catch (_) { ok = false; }
+    V.mic = ok ? "ok" : "off";
+    if (ANDROID) {
+      const cam = $("voiceCam");
+      cam.accept = "audio/*";
+      cam.setAttribute("capture", "");
+      $("voiceRecT").textContent = "Записать диктофоном";
+      $("voiceRecS").textContent = "Откроется запись звука";
+    }
     syncMic();
   }
   function syncMic() {
     const b = $("micBtn");
-    const file = V.mic === "off";
-    b.setAttribute("aria-label", file ? "Отправить голосовое файлом" : "Записать голосовое");
-    b.title = file ? "Голосовое: выбрать запись" : "Записать голосовое";
+    const label = V.mic === "ok" ? "Записать голосовое" : TOUCH ? "Голосовое: записать или выбрать запись" : "Отправить голосовое файлом";
+    b.setAttribute("aria-label", label);
+    b.title = label;
   }
+  function openVoiceMenu() { $("voiceMenu").hidden = false; $("micBtn").setAttribute("aria-expanded", "true"); }
+  function closeVoiceMenu() { $("voiceMenu").hidden = true; $("micBtn").setAttribute("aria-expanded", "false"); }
   function voiceReady() {
     if (!S.db) return false;
     if (!S.canWrite) { notice("С этого входа можно только читать."); return false; }
@@ -1966,28 +2029,46 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     if (!S.assets) { notice("Голосовые с этого входа отправить нельзя."); return false; }
     return true;
   }
-  function micClick() {
+  function micClick(e) {
+    if (e) e.stopPropagation();
+    if (!$("voiceMenu").hidden) { closeVoiceMenu(); return; }
     if (S.busy || V.rec || !voiceReady()) return;
-    if (V.mic === "off") { pickAudio(); return; }
-    if (V.starting) return;
-    V.starting = true;
-    startRec().finally(() => { V.starting = false; });
+    if (V.mic === "ok") {
+      if (V.starting) return;
+      V.starting = true;
+      startRec().finally(() => { V.starting = false; });
+      return;
+    }
+    if (TOUCH) { openVoiceMenu(); return; }
+    pickAudio();
   }
   function pickAudio() {
     if (!ls.get("chat.voiceHint")) {
       ls.set("chat.voiceHint", "1");
-      notice("Запись прямо в чате закрыта платформой Claude, поэтому голосовое уходит файлом. Запиши его диктофоном на телефоне или компьютере и выбери здесь.", true);
+      notice("Записывать прямо в чате Claude не даёт, поэтому голосовое уходит файлом: запиши его диктофоном и выбери здесь.", true);
     }
     $("audioFile").click();
   }
+  // one handler for every voice input: a clip from the camera, a recording, a file
+  function takeVoiceFile(inp) {
+    const f = inp.files && inp.files[0];
+    inp.value = "";
+    closeVoiceMenu();
+    if (!f) return;
+    const video = /^video\//.test(f.type) || (!/^audio\//.test(f.type) && /\.(mov|mp4|m4v|qt)$/i.test(f.name || ""));
+    if (video) sendVoiceVideo(f); else sendVoiceFile(f);
+  }
   async function startRec() {
-    let st;
-    try { st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+    let st, late = false;
+    const gum = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    try { st = await Promise.race([gum, new Promise((_, rej) => setTimeout(() => { late = true; rej({ name: "TimeoutError" }); }, 15000))]); }
     catch (e) {
+      // a request that answers after we gave up must not leave the microphone on
+      if (late) gum.then((s) => s.getTracks().forEach((t) => t.stop()), () => {});
       V.mic = "off";
       syncMic();
       const name = e && e.name;
-      notice((name === "NotAllowedError" || name === "SecurityError" ? "Микрофон в этом окне закрыт." : "Микрофон не нашёлся.") + " Нажми на микрофон ещё раз и выбери запись с диктофона.", true);
+      notice((name === "NotAllowedError" || name === "SecurityError" || name === "TimeoutError" ? "Микрофон в этом окне закрыт." : "Микрофон не нашёлся.") + " Нажми на микрофон ещё раз: " + (TOUCH ? "можно записать через камеру или выбрать запись." : "откроется выбор записи."), true);
       return;
     }
     const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus", "audio/webm"].find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch (_) { return false; } }) || "";
@@ -2060,21 +2141,24 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   }
 
   // Duration and waveform of a picked file, read in the page; both are optional.
-  async function analyseAudio(blob) {
+  async function decodeAudio(data) {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC && blob.size <= 8 * 1048576) {
-      let ctx = null;
+    const ctx = new AC();
+    try { return await new Promise((res, rej) => { const p = ctx.decodeAudioData(data, res, rej); if (p && p.then) p.then(res, rej); }); }
+    finally { if (ctx.close) ctx.close().catch(() => {}); }
+  }
+  function peaksOf(ch) {
+    const step = Math.max(1, Math.floor(ch.length / (BARS * 8)));
+    const vals = [];
+    for (let i = 0; i < ch.length; i += step) { let p = 0; for (let j = i; j < i + step && j < ch.length; j++) { const x = Math.abs(ch[j]); if (x > p) p = x; } vals.push(p); }
+    return encodePeaks(vals);
+  }
+  async function analyseAudio(blob) {
+    if ((window.AudioContext || window.webkitAudioContext) && blob.size <= 8 * 1048576) {
       try {
-        ctx = new AC();
-        const data = await blob.arrayBuffer();
-        const buf = await new Promise((res, rej) => { const p = ctx.decodeAudioData(data, res, rej); if (p && p.then) p.then(res, rej); });
-        const ch = buf.getChannelData(0);
-        const step = Math.max(1, Math.floor(ch.length / (BARS * 8)));
-        const vals = [];
-        for (let i = 0; i < ch.length; i += step) { let p = 0; for (let j = i; j < i + step && j < ch.length; j++) { const x = Math.abs(ch[j]); if (x > p) p = x; } vals.push(p); }
-        return { dur: buf.duration, peaks: encodePeaks(vals) };
-      } catch (_) {
-      } finally { if (ctx && ctx.close) ctx.close().catch(() => {}); }
+        const buf = await decodeAudio(await blob.arrayBuffer());
+        return { dur: buf.duration, peaks: peaksOf(buf.getChannelData(0)) };
+      } catch (_) {}
     }
     const dur = await new Promise((res) => {
       const a = new Audio(), url = URL.createObjectURL(blob);
@@ -2087,6 +2171,132 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       a.src = url;
     });
     return { dur, peaks: "" };
+  }
+
+  // ---------- sound out of a camera clip ----------
+  // A phone cannot record sound inside the chat, but it can film a clip. Its sound is AAC in a QuickTime or MP4
+  // file that Safari will not decode as audio, so the AAC frames are copied out with ADTS headers, untouched.
+  const AAC_RATES = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+  function movToAdts(buf) {
+    const dv = new DataView(buf), u8 = new Uint8Array(buf), N = u8.length;
+    const cc = (o) => String.fromCharCode(u8[o], u8[o + 1], u8[o + 2], u8[o + 3]);
+    const kids = (s, e) => {
+      const out = [];
+      for (let o = s; o + 8 <= e;) {
+        let size = dv.getUint32(o), hdr = 8;
+        if (size === 1) { if (o + 16 > e) break; size = dv.getUint32(o + 8) * 4294967296 + dv.getUint32(o + 12); hdr = 16; }
+        else if (size === 0) size = e - o;
+        if (size < hdr || o + size > e) break;
+        out.push({ t: cc(o + 4), s: o + hdr, e: o + size });
+        o += size;
+      }
+      return out;
+    };
+    const one = (b, t) => (b ? kids(b.s, b.e).find((x) => x.t === t) || null : null);
+    const moov = kids(0, N).find((b) => b.t === "moov");
+    if (!moov) throw new Error("no moov");
+    for (const trak of kids(moov.s, moov.e).filter((b) => b.t === "trak")) {
+      const mdia = one(trak, "mdia"), hdlr = one(mdia, "hdlr");
+      if (!hdlr || cc(hdlr.s + 8) !== "soun") continue;
+      const stbl = one(one(mdia, "minf"), "stbl");
+      const stsd = one(stbl, "stsd"), stsz = one(stbl, "stsz"), stsc = one(stbl, "stsc");
+      const co32 = one(stbl, "stco"), co = co32 || one(stbl, "co64");
+      if (!stsd || !stsz || !stsc || !co) continue;
+      // the AAC setup is an esds box somewhere inside the sample description
+      let p = -1;
+      for (let o = stsd.s + 8; o + 4 <= stsd.e; o++) if (u8[o] === 0x65 && cc(o) === "esds") { p = o + 8; break; }
+      if (p < 0) continue;
+      const desc = () => { const tag = u8[p++]; let len = 0; for (let i = 0; i < 4; i++) { const b = u8[p++]; len = (len << 7) | (b & 0x7f); if (!(b & 0x80)) break; } return { tag, len }; };
+      if (desc().tag !== 3) continue;
+      const fl = u8[p + 2];
+      p += 3;
+      if (fl & 0x80) p += 2;
+      if (fl & 0x40) p += 1 + u8[p];
+      if (fl & 0x20) p += 2;
+      if (desc().tag !== 4 || ![0x40, 0x66, 0x67].includes(u8[p])) continue;
+      p += 13;
+      const dsi = desc();
+      if (dsi.tag !== 5 || dsi.len < 2) continue;
+      const aot = u8[p] >> 3, fi = ((u8[p] & 7) << 1) | (u8[p + 1] >> 7), ch = (u8[p + 1] >> 3) & 15;
+      if (aot < 1 || aot > 4 || fi > 12 || ch < 1 || ch > 7) continue;
+      const fixed = dv.getUint32(stsz.s + 4), n = dv.getUint32(stsz.s + 8);
+      const nchunks = dv.getUint32(co.s + 4), runs = dv.getUint32(stsc.s + 4);
+      const chunkAt = (i) => (co32 ? dv.getUint32(co.s + 8 + i * 4) : dv.getUint32(co.s + 8 + i * 8) * 4294967296 + dv.getUint32(co.s + 12 + i * 8));
+      const frames = [];
+      let total = 0, si = 0;
+      for (let r = 0; r < runs && si < n; r++) {
+        const first = dv.getUint32(stsc.s + 8 + r * 12) - 1, per = dv.getUint32(stsc.s + 12 + r * 12);
+        const last = r + 1 < runs ? dv.getUint32(stsc.s + 8 + (r + 1) * 12) - 1 : nchunks;
+        for (let c = first; c < last && si < n; c++) {
+          let o = chunkAt(c);
+          for (let k = 0; k < per && si < n; k++, si++) {
+            const sz = fixed || dv.getUint32(stsz.s + 12 + si * 4);
+            if (o + sz > N || sz + 7 > 8191) throw new Error("bad frame");
+            frames.push(o, sz);
+            total += sz + 7;
+            o += sz;
+          }
+        }
+      }
+      if (!frames.length) continue;
+      const out = new Uint8Array(total);
+      let w = 0;
+      for (let i = 0; i < frames.length; i += 2) {
+        const o = frames[i], sz = frames[i + 1], L = sz + 7;
+        out[w] = 0xff; out[w + 1] = 0xf1;
+        out[w + 2] = ((aot - 1) << 6) | (fi << 2) | (ch >> 2);
+        out[w + 3] = ((ch & 3) << 6) | (L >> 11);
+        out[w + 4] = (L >> 3) & 0xff;
+        out[w + 5] = ((L & 7) << 5) | 0x1f;
+        out[w + 6] = 0xfc;
+        out.set(u8.subarray(o, o + sz), w + 7);
+        w += L;
+      }
+      return { bytes: out, dur: (frames.length / 2) * 1024 / AAC_RATES[fi] };
+    }
+    throw new Error("no AAC sound");
+  }
+  function wavBlob(pcm, rate) {
+    const n = pcm.length, dv = new DataView(new ArrayBuffer(44 + n * 2));
+    const put = (o, t) => { for (let i = 0; i < 4; i++) dv.setUint8(o + i, t.charCodeAt(i)); };
+    put(0, "RIFF"); dv.setUint32(4, 36 + n * 2, true); put(8, "WAVE"); put(12, "fmt ");
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, rate, true);
+    dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); put(36, "data"); dv.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) { const x = Math.max(-1, Math.min(1, pcm[i])); dv.setInt16(44 + i * 2, x < 0 ? x * 32768 : x * 32767, true); }
+    return new Blob([dv.buffer], { type: "audio/wav" });
+  }
+  async function soundFromVideo(file) {
+    const buf = await file.arrayBuffer();
+    try {
+      const aac = movToAdts(buf);
+      const blob = new Blob([aac.bytes], { type: "audio/aac" });
+      const a = await analyseAudio(blob);
+      return { blob, type: "audio/aac", dur: a.dur || aac.dur, peaks: a.peaks };
+    } catch (_) {}
+    // other sound inside: decode what the browser can and keep it as 16 kHz mono WAV
+    const src = await decodeAudio(buf);
+    const rate = 16000;
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const off = new OAC(1, Math.max(1, Math.ceil(src.duration * rate)), rate);
+    const node = off.createBufferSource();
+    node.buffer = src;
+    node.connect(off.destination);
+    node.start(0);
+    const out = await new Promise((res, rej) => { off.oncomplete = (e) => res(e.renderedBuffer); const p = off.startRendering(); if (p && p.then) p.then(res, rej); });
+    const pcm = out.getChannelData(0);
+    return { blob: wavBlob(pcm, rate), type: "audio/wav", dur: src.duration, peaks: peaksOf(pcm) };
+  }
+  async function sendVoiceVideo(file) {
+    if (S.busy || !voiceReady()) return;
+    if (file.size > 300 * 1048576) { notice("Видео слишком длинное. Запиши голосовое покороче."); return; }
+    setBusy(true);
+    $("text").placeholder = "Достаю звук из видео…";
+    let out = null;
+    try { out = await soundFromVideo(file); } catch (_) { out = null; }
+    setBusy(false);
+    if (!out) { notice("Не получилось достать звук из этого видео. Запиши голосовое диктофоном и нажми «Выбрать запись».", true); return; }
+    if (out.blob.size > 15 * 1048576) { notice("Запись вышла больше 15 МБ. Запиши покороче."); return; }
+    await sendVoice(out.blob, out.type, out.dur, out.peaks);
   }
   async function sendVoiceFile(file) {
     if (S.busy || !voiceReady()) return;
@@ -2566,7 +2776,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     for (const v of ["1", "1.5", "2"]) {
       const b = btn(null, v.replace(".", ",") + "×");
       b.setAttribute("aria-pressed", rate === v ? "true" : "false");
-      b.addEventListener("click", () => { ls.set("chat.voiceRate", v); renderPanel(); });
+      b.addEventListener("click", () => { ls.set("chat.voiceRate", v); renderPanel(); syncPrefs(); });
       rseg.append(b);
     }
     rateRow.append(rseg);
@@ -2644,8 +2854,108 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     }
   }
 
+  // ---------- who is on this device ----------
+  // The page runs in a frame from another site; Safari and the Claude app on iPhone wipe such a frame's storage when
+  // they close, and the shared account cannot tell people apart. So each people doc keeps a rough mark of the devices
+  // its person used (devices) and their settings (prefs), and an emptied device gets its nick back from there.
+  const DEVICE = (() => {
+    const n = navigator, sc = window.screen || {}, r = window.devicePixelRatio || 1;
+    let tz = "";
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (_) {}
+    const w = Math.round((sc.width || 0) * r), hh = Math.round((sc.height || 0) * r);
+    const langs = n.languages && n.languages.length ? n.languages : [n.language || ""];
+    const parts = [String(n.userAgent || "").replace(/[\d._]+/g, ""), n.platform || "", langs.join(","), tz, Math.max(w, hh) + "x" + Math.min(w, hh), n.hardwareConcurrency || 0, n.maxTouchPoints || 0];
+    return "d" + fnv(parts.join("|")).toString(16).padStart(8, "0");
+  })();
+  function deviceKeys(v) {
+    if (!v || typeof v !== "object" || Array.isArray(v)) return [];
+    return Object.keys(v).filter((k) => /^d[0-9a-f]{8}$/.test(k)).slice(0, 64);
+  }
+  const onThisDevice = (p) => p.devices.includes(DEVICE);
+  let whoTimer = 0;
+  function waitForWho() {
+    S.needWho = true;
+    whoTimer = setTimeout(resolveWho, 6000);
+  }
+  function resolveWho() {
+    if (!S.needWho) return;
+    S.needWho = false;
+    clearTimeout(whoTimer);
+    if (S.nick) return;
+    const here = [...S.people.values()].filter(onThisDevice);
+    if (here.length === 1) adoptNick(here[0], true);
+    else openProfile();
+  }
+  // settings, voice speed and read marks come back only where this device kept none of its own
+  function restorePrefs(p) {
+    const pr = p && p.prefs;
+    if (!pr) return;
+    if (!ls.get("chat.settings")) { S.set = normSettings(pr); ls.set("chat.settings", JSON.stringify(S.set)); applySettings(); cache.clear(); }
+    if (!ls.get("chat.voiceRate") && RATES.includes(Number(pr.voiceRate))) ls.set("chat.voiceRate", String(Number(pr.voiceRate)));
+    const seen = Number(pr.seen), ms = Number(pr.mentionSeen);
+    if (!S.seen && seen > 0) { S.seen = seen; ls.set("chat.seen", String(seen)); }
+    if (!S.mentionSeen && ms > 0) { S.mentionSeen = ms; ls.set("chat.mentionSeen", String(ms)); }
+  }
+  function adoptNick(p, auto) {
+    S.nick = p.nick;
+    ls.set("chat.nick", p.nick);
+    restorePrefs(p);
+    closeProfile();
+    syncMe(); pushPresence(); render(); renderPanel();
+    rememberDevice();
+    if (auto) notice("Устройство знакомо: ты — " + p.nick + ".", true, { label: "Это не я", fn: notMe });
+  }
+  function notMe() {
+    S.nick = "";
+    ls.set("chat.nick", "");
+    syncMe(); pushPresence(); render(); renderPanel();
+    openProfile();
+  }
+  function rememberDevice() {
+    if (!S.nick || !S.db || !S.canWrite || !S.peopleLoaded || S.deviceSent === keyOf(S.nick)) return;
+    const p = S.people.get(keyOf(S.nick));
+    if (p && onThisDevice(p)) return;
+    S.deviceSent = keyOf(S.nick);
+    const now = Date.now();
+    const ref = S.db.doc("people/" + pid(S.nick));
+    (p ? ref.update({ devices: { [DEVICE]: now } }) : ref.set({ nick: S.nick, face: faceSeed(S.nick), card: "", updatedAt: now, devices: { [DEVICE]: now } })).catch(() => {});
+  }
+  let prefsTimer = 0, prefsSent = "";
+  function syncPrefs(now) {
+    clearTimeout(prefsTimer);
+    if (!S.nick || !S.db || !S.canWrite || !S.people.has(keyOf(S.nick))) return;
+    const go = () => {
+      if (!S.nick || !S.people.has(keyOf(S.nick))) return;
+      const v = Object.assign({}, S.set, { voiceRate: voiceRate(), seen: S.seen, mentionSeen: S.mentionSeen });
+      const k = keyOf(S.nick) + JSON.stringify(v);
+      if (k === prefsSent) return;
+      prefsSent = k;
+      S.db.doc("people/" + pid(S.nick)).update({ prefs: v }).catch(() => { prefsSent = ""; });
+    };
+    if (now) go(); else prefsTimer = setTimeout(go, 2000);
+  }
+  function drawWho() {
+    const box = $("whoBox"), list = $("whoList");
+    const ppl = S.nick ? [] : [...S.people.values()];
+    box.hidden = !ppl.length;
+    if (!ppl.length) { list.replaceChildren(); return; }
+    const online = onlineNicks();
+    ppl.sort((a, b) => onThisDevice(b) - onThisDevice(a) || online.has(keyOf(a.nick)) - online.has(keyOf(b.nick)) || a.nick.localeCompare(b.nick, "ru"));
+    list.replaceChildren(...ppl.slice(0, 12).map((p) => {
+      const here = onThisDevice(p);
+      const b = btn(here ? "match" : null, null, "Это я: " + p.nick);
+      const tx = h("span");
+      tx.append(h("b", null, p.nick));
+      const note = here ? "с этого устройства" : online.has(keyOf(p.nick)) ? "сейчас в сети" : "";
+      if (note) tx.append(h("small", null, note));
+      b.append(avatar(p.nick, "s"), tx);
+      b.addEventListener("click", () => adoptNick(p, false));
+      return b;
+    }));
+  }
+
   // ---------- profile ----------
-  let pickSeeds = [], pickSel = 0;
+  let pickSeeds = [], pickSel = 0, pickTouched = false;
   function seedsFor(nick, base) {
     const a = [base];
     let x = fnv(keyOf(nick) + ":" + Date.now());
@@ -2661,11 +2971,14 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       const a = h("div", "ava");
       a.innerHTML = faceSVG(s);
       b.append(a);
-      b.addEventListener("click", () => { pickSel = i; drawPick(); });
+      b.addEventListener("click", () => { pickSel = i; pickTouched = true; drawPick(); });
       box.append(b);
     });
   }
   function openProfile() {
+    S.needWho = false;
+    clearTimeout(whoTimer);
+    pickTouched = false;
     const first = !S.nick;
     $("profileTitle").textContent = first ? "Как тебя подписывать?" : "Мой профиль";
     $("profileIntro").hidden = !first;
@@ -2676,26 +2989,41 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     pickSeeds = seedsFor(S.nick || "новенький", S.nick ? faceSeed(S.nick) : fnv(String(Date.now())));
     pickSel = 0;
     drawPick();
+    drawWho();
     $("profileCancel").textContent = first ? "Пока посмотреть" : "Отмена";
     $("profileCancel").hidden = false;
     $("profileBox").hidden = false;
-    setTimeout(() => $("nickInput").focus(), 0);
+    setTimeout(() => { const w = !$("whoBox").hidden && $("whoList").firstElementChild; (w || $("nickInput")).focus(); }, 0);
   }
   function closeProfile() { $("profileBox").hidden = true; }
   async function saveProfile() {
-    const nick = clean($("nickInput").value, 24);
-    if (!nick) { $("nickErr").hidden = false; return; }
-    const face = pickSeeds[pickSel] >>> 0;
-    const card = clean($("cardInput").value, 3000, true);
+    const typedNick = clean($("nickInput").value, 24);
+    if (!typedNick) { $("nickErr").hidden = false; return; }
+    const prev = S.people.get(keyOf(typedNick)) || null;
+    // a known nick typed again on an emptied device keeps its spelling, face and card unless they were changed here
+    const back = !S.nick && prev;
+    const nick = back ? prev.nick : typedNick;
+    const face = back && !pickTouched && Number.isFinite(prev.face) ? prev.face : pickSeeds[pickSel] >>> 0;
+    const typed = clean($("cardInput").value, 3000, true);
+    const card = back && !typed ? prev.card : typed;
+    const now = Date.now();
     S.nick = nick;
     ls.set("chat.nick", nick);
-    S.people.set(keyOf(nick), { nick, face, card, updatedAt: Date.now() });
+    if (back) restorePrefs(prev);
+    S.people.set(keyOf(nick), { nick, face, card, updatedAt: now, devices: prev ? [...new Set(prev.devices.concat(DEVICE))] : [DEVICE], prefs: prev ? prev.prefs : null });
+    S.deviceSent = keyOf(nick);
     $("profileBox").hidden = true;
     syncMe(); pushPresence(); render(); renderPanel();
     $("text").focus();
     if (S.db && S.canWrite) {
-      try { await S.db.doc("people/" + pid(nick)).set({ nick, face, card, updatedAt: Date.now() }); }
-      catch (e) { writeError(e); }
+      const ref = S.db.doc("people/" + pid(nick));
+      const data = { nick, face, card, updatedAt: now, devices: { [DEVICE]: now } };
+      // update keeps the devices and prefs other devices saved; set only creates a new person
+      try { if (prev) await ref.update(data); else await ref.set(data); }
+      catch (e) {
+        if (prev && e && e.code === "invalid_argument") { try { await ref.set(data); } catch (e2) { writeError(e2); } }
+        else writeError(e);
+      }
     }
   }
   function syncMe() {
@@ -3037,6 +3365,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     document.addEventListener("keydown", unlock);
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) { S.hiddenNew = 0; document.title = "Наш чат"; render(); }
+      else syncPrefs(true);
     });
     $("olderBtn").addEventListener("click", loadOlder);
     $("noticeClose").addEventListener("click", () => { $("notice").hidden = true; });
@@ -3105,7 +3434,9 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     $("file").addEventListener("change", () => { const f = $("file").files; if (f && f.length) addFiles(f); $("file").value = ""; });
     $("hoForm").addEventListener("keydown", (e) => { if (e.key === "Escape") setHandoff(false); });
     $("micBtn").addEventListener("click", micClick);
-    $("audioFile").addEventListener("change", () => { const f = $("audioFile").files; if (f && f[0]) sendVoiceFile(f[0]); $("audioFile").value = ""; });
+    for (const id of ["audioFile", "voiceCam", "voicePick"]) $(id).addEventListener("change", () => takeVoiceFile($(id)));
+    document.addEventListener("click", (e) => { if (!$("voiceMenu").hidden && !e.target.closest("#voiceMenu, #micBtn")) closeVoiceMenu(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("voiceMenu").hidden) closeVoiceMenu(); });
     $("recCancel").addEventListener("click", () => stopRec(false));
     $("recSend").addEventListener("click", () => stopRec(true));
     $("recBar").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); stopRec(false); } });
@@ -3133,7 +3464,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     });
 
     $("meBtn").addEventListener("click", openProfile);
-    $("faceMore").addEventListener("click", () => { pickSeeds = seedsFor(String(Math.random()), pickSeeds[pickSel]); pickSel = 0; drawPick(); });
+    $("faceMore").addEventListener("click", () => { pickSeeds = seedsFor(String(Math.random()), pickSeeds[pickSel]); pickSel = 0; pickTouched = true; drawPick(); });
     $("profileCancel").addEventListener("click", closeProfile);
     $("profileBox").addEventListener("click", (e) => { if (e.target === $("profileBox")) closeProfile(); });
     $("profileBox").addEventListener("keydown", (e) => { if (e.key === "Escape") closeProfile(); });
@@ -3163,15 +3494,15 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     if (draft) { $("text").value = draft; autosize(); }
     syncComposer();
     render();
-    if (!S.nick) openProfile();
+    if (!S.nick) waitForWho();
     if (window.innerWidth > 1000 && ls.get("chat.panel")) openPanel(ls.get("chat.panel"));
 
     const c = window.claude;
-    if (!c || typeof c.use !== "function") { S.missing = true; $("sub").textContent = ""; syncComposer(); render(); return; }
+    if (!c || typeof c.use !== "function") { S.missing = true; $("sub").textContent = ""; syncComposer(); render(); resolveWho(); return; }
     const use = (n) => Promise.resolve().then(() => c.use(n)).catch(() => null);
     const [db, room, sample, assets, downloads, user, perms] = await Promise.all([use("db"), use("room"), use("sample"), use("assets"), use("downloads"), use("user"), use("permissions")]);
     S.db = db; S.room = room; S.sample = sample; S.assets = assets; S.downloads = downloads; S.perms = perms;
-    if (!db) { S.missing = true; $("sub").textContent = ""; syncComposer(); render(); return; }
+    if (!db) { S.missing = true; $("sub").textContent = ""; syncComposer(); render(); resolveWho(); return; }
     if (user && typeof user.can === "function") {
       try { if ((await user.can("data.write")) === false) S.canWrite = false; } catch (_) {}
     }
