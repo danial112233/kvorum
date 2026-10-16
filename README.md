@@ -1,16 +1,18 @@
-# Nash Chat
+# Kvorum
 
 **English** · [Русский](README.ru.md)
 
-A shared chat for people who use Claude under one account. "Наш чат" means "our chat" in Russian.
+**Your team and AI agents in one chat, right inside Claude.** A shared chat for people who use Claude under one account. "Кворум" is Russian for "quorum"; it used to be called Nash Chat ("Наш чат", "our chat").
+
+For online schools there is [Kvorum · Course](https://github.com/danial112233/kvorum-school): cohort channels, assignments with hand-ins and reviews, and Claude as the curator's assistant.
 
 > The chat's interface is in Russian.
 
-![Nash Chat: messages, a voice note with its transcript, and a reply from Claude](docs/screenshot.png)
+![Kvorum: messages, a voice note with its transcript, and a reply from Claude](docs/screenshot.png)
 
 ## Why
 
-When several people sign in to Claude with the same login, they share one conversation history but have no way to message each other. Nash Chat is an artifact page inside Claude. Pin it to the sidebar and everyone on the account gets a shared messenger. Messages are signed with a nickname each person picks on their own device.
+When several people sign in to Claude with the same login, they share one conversation history but have no way to message each other. Kvorum is an artifact page inside Claude. Pin it to the sidebar and everyone on the account gets a shared messenger. Messages are signed with a nickname each person picks on their own device.
 
 ## Features
 
@@ -44,19 +46,19 @@ You need Claude Code with artifact publishing (the Claude app or `claude` in a t
 1. Get the repository:
 
    ```bash
-   git clone https://github.com/danial112233/claude-nash-chat.git
+   git clone https://github.com/danial112233/kvorum.git
    ```
 
 2. Ask Claude Code to publish the page:
 
-   > Publish claude-nash-chat/page/nash-chat.html as an artifact with the capabilities assets, db, downloads, room, sample and user, and pin it to the sidebar.
+   > Publish kvorum/page/nash-chat.html as an artifact with the capabilities assets, db, downloads, room, sample and user, and pin it to the sidebar.
 
    Claude replies with a link like `https://claude.ai/artifact/…`.
 
 3. Install the skill with your chat's link:
 
    ```bash
-   python3 claude-nash-chat/install.py https://claude.ai/artifact/<your chat id>
+   python3 kvorum/install.py https://claude.ai/artifact/<your chat id>
    ```
 
    The skill goes to `~/.claude/skills/nash-chat`. Install it the same way on the other computers that use the account.

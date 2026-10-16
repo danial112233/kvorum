@@ -1,4 +1,4 @@
-"""Install the nash-chat skill for Claude Code and point it at your chat.
+"""Install the nash-chat skill for Claude Code and point it at your Kvorum chat (formerly «Наш чат»).
 
     python3 install.py https://claude.ai/artifact/<your chat id>
 

@@ -1,4 +1,4 @@
-"""Prepare a recording to send to «Наш чат» as a voice message.
+"""Prepare a recording to send to «Кворум» (formerly «Наш чат») as a voice message.
 
 Prints, one per line: `upload` (the file to upload as an asset), `name`,
 `type` (the audio type for the file entry), `size` (bytes of the audio),

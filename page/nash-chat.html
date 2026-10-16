@@ -1,4 +1,4 @@
-<title>Наш чат</title>
+<title>Кворум</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -671,7 +671,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 <div class="app" id="app">
   <aside class="side" id="side" aria-label="Каналы и группы">
     <div class="side-head">
-      <b>Наш чат</b>
+      <b>Кворум</b>
       <button class="xbtn hbtn" type="button" id="helpBtn" aria-label="Помощь" title="Помощь">?</button>
       <button class="xbtn" type="button" id="sideClose" aria-label="Закрыть список каналов">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -1890,7 +1890,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
         S.maxOther = newest;
         const ping = fresh.some(mentionsMe);
         if (S.set.sound === "all" || (S.set.sound === "mentions" && ping)) chime();
-        if (document.hidden) { S.hiddenNew += fresh.length; document.title = "(" + S.hiddenNew + ") Наш чат"; }
+        if (document.hidden) { S.hiddenNew += fresh.length; document.title = "(" + S.hiddenNew + ") Кворум"; }
       }
       markSeen(chMsgs);
       renderMentions(all.list);
@@ -3811,7 +3811,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
   }
   // ---------- help ----------
   const HELP = [
-    ["Что это", "Общий мессенджер внутри Claude для тех, кто входит под одним аккаунтом, и для приглашённых гостей. Сообщения подписываются ником, который каждый выбирает на своём устройстве. Аккаунт общий, поэтому подписаться можно любым ником: чат рассчитан на своих."],
+    ["Что это", "Кворум (раньше «Наш чат») — общий мессенджер внутри Claude для тех, кто входит под одним аккаунтом, и для приглашённых гостей. Сообщения подписываются ником, который каждый выбирает на своём устройстве. Аккаунт общий, поэтому подписаться можно любым ником: чат рассчитан на своих."],
     ["Как пригласить человека", "Владелец чата нажимает «Поделиться» вверху страницы, приглашает человека по почте и выбирает роль «Наблюдатель» или «Комментатор». Доступ по ссылке оставь выключенным. Роль «Редактор» не давай: с ней можно менять саму страницу чата."],
     ["Гости", "Гость читает всё: каналы, группы, память, карточки и ссылки на звонки. Пишет он только текстом и только в #общий и открытые каналы, а у его ника всегда стоит «(гость)»; ник, похожий на чужой или на Claude, становится просто «Гость». Платформа не даёт гостям писать в базу чата, поэтому их текст переносит открытый чат участника: пока чат не открыт на экране хотя бы у одного участника, у гостя стоит «в очереди». В голосовые каналы гости входят как все, с пометкой «(гость)».\nГолосовые сообщения (бета): до минуты, до 10 в день. Запись сжимается в телефонное качество и по кусочкам уходит через открытый чат участника, это занимает 10–30 секунд; пока идёт передача, страницу не закрывай. Кружки и файлы гостям недоступны."],
     ["Каналы и группы", "Каналы — в списке слева (на телефоне — кнопка ☰). «+ Канал или группа» создаёт новый. Группа видна в списке только её участникам, но это порядок, а не защита: вход общий, а гости читают всё. Ненужный канал можно скрыть у всех и потом вернуть."],
@@ -5738,7 +5738,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
     document.addEventListener("click", (e) => { if (pressSwallow) { pressSwallow = false; e.preventDefault(); e.stopPropagation(); } }, true);
     document.addEventListener("keydown", unlock);
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) { S.hiddenNew = 0; document.title = "Наш чат"; render(); }
+      if (!document.hidden) { S.hiddenNew = 0; document.title = "Кворум"; render(); }
       else syncPrefs(true);
     });
     $("olderBtn").addEventListener("click", loadOlder);

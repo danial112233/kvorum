@@ -1,4 +1,4 @@
-"""Values a Claude Code session needs to write into «Наш чат».
+"""Values a Claude Code session needs to write into «Кворум» (formerly «Наш чат»).
 
 Prints, from one clock reading: at (ms), day (UTC), week_ago (UTC),
 a fresh writer suffix and message id, and, with --nick, the people
