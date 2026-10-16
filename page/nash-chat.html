@@ -92,6 +92,17 @@ h1 { margin: 0; font-size: var(--t-base); font-weight: 600; line-height: 1.25; }
 /* Аватарки */
 .ava { flex: none; width: 36px; height: 36px; border-radius: var(--r-f); overflow: hidden; position: relative; background: var(--surface-2); }
 .ava svg { width: 100%; height: 100%; }
+.ava img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ava::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); pointer-events: none; }
+.ava.claude::after { display: none; }
+.photo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.photo-row .btn { display: inline-flex; align-items: center; cursor: pointer; }
+.crop { display: grid; justify-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: var(--surface-2); }
+.crop canvas { width: 220px; height: 220px; border-radius: 50%; touch-action: none; cursor: grab; background: var(--surface); box-shadow: 0 0 0 2px var(--accent); }
+.crop canvas:active { cursor: grabbing; }
+.crop input[type="range"] { width: 220px; accent-color: var(--accent); }
+.crop .rowb { display: flex; gap: 8px; }
+.crop small { font-size: var(--t-xs); color: var(--muted); }
 .ava.s { width: 28px; height: 28px; }
 .ava.l { width: 56px; height: 56px; }
 .ava.claude { display: grid; place-items: center; background: var(--brand); color: #FFFFFF; }
@@ -922,6 +933,16 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       <div class="faces-pick" id="facePick" role="group" aria-label="Аватарка"></div>
     </div>
     <button class="btn sec" type="button" id="faceMore">Другие аватарки</button>
+    <div class="photo-row" id="photoRow" hidden>
+      <label class="btn sec"><input type="file" class="vh" id="photoInput" accept="image/*">Загрузить фото</label>
+      <button class="btn sec" type="button" id="photoRemove" hidden>Убрать фото</button>
+    </div>
+    <div class="crop" id="cropBox" hidden>
+      <canvas id="cropCanvas" width="440" height="440" aria-label="Фото: потяни, чтобы подвинуть"></canvas>
+      <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1" aria-label="Масштаб фото">
+      <small>Потяни фото и подвинь ползунок, чтобы лицо было в круге.</small>
+      <div class="rowb"><button class="btn sec" type="button" id="cropCancel">Отмена</button><button class="btn" type="button" id="cropOk">Взять это фото</button></div>
+    </div>
     <label>Карточка для агента<textarea class="field" id="cardInput" rows="4" maxlength="3000" placeholder="Чем занимаюсь, какие проекты веду, где что лежит, кого спрашивать"></textarea></label>
     <div class="rowb">
       <button class="btn sec" type="button" id="profileCancel" hidden>Отмена</button>
@@ -1046,17 +1067,52 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   const FACE_SKIN = ["#FFE7B8", "#FFD6BD", "#FFF4E0", "#FBE3F1", "#E2F1FF", "#E3F7E8", "#FFF0C4", "#ECE6FF"];
   const faceCache = new Map();
   function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-  function faceSVG(seed) {
+  // colours a step lighter or darker, for soft gradients
+  function mixHex(a, b, t) {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const ch = (sh) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+    return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1);
+  }
+  const FACE_STYLES = ["face", "mono", "shape"];
+  function initialsOf(nick) {
+    const w = String(nick || "").replace(/\s*\(гость\)\s*$/i, "").trim().split(/\s+/).filter(Boolean);
+    const t = w.length > 1 ? [...w[0]][0] + [...w[1]][0] : [...(w[0] || "?")][0];
+    return t.toUpperCase().replace(/[<>&"']/g, "");
+  }
+  // style "face" keeps the exact draws of the first version, so everyone's face stays theirs
+  function faceSVG(seed, style, nick) {
     seed = seed >>> 0;
-    if (faceCache.has(seed)) return faceCache.get(seed);
+    style = FACE_STYLES.includes(style) ? style : "face";
+    const key = seed + "|" + style + (style === "mono" ? "|" + initialsOf(nick) : "");
+    if (faceCache.has(key)) return faceCache.get(key);
     const r = mulberry(seed || 1);
     const pick = (a) => a[Math.floor(r() * a.length)];
+    const gid = "fg" + seed.toString(36) + style[0];
+    if (style !== "face") {
+      const c1 = pick(FACE_BG), c2 = pick(FACE_BG.filter((c) => c !== c1)), light = pick(FACE_SKIN), ang = Math.floor(r() * 4) * 45;
+      let s = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="' + gid + '" gradientTransform="rotate(' + ang + ' .5 .5)"><stop offset="0" stop-color="' + mixHex(c1, "#FFFFFF", .12) + '"/><stop offset="1" stop-color="' + mixHex(c2, "#000000", .08) + '"/></linearGradient></defs><rect width="64" height="64" fill="url(#' + gid + ')"/>';
+      if (style === "mono") {
+        const t = initialsOf(nick), fs = t.length > 1 ? 24 : 30;
+        const lum = (hx) => { const v = parseInt(hx.slice(1), 16); return (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255; };
+        const ink = (lum(c1) + lum(c2)) / 2 > 0.6 ? "#2A2320" : "#FFFFFF";
+        s += '<circle cx="50" cy="12" r="16" fill="#FFFFFF" opacity=".12"/><text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="Golos Text, -apple-system, system-ui, sans-serif" font-weight="600" font-size="' + fs + '" fill="' + ink + '" letter-spacing="-.5">' + t + "</text>";
+      } else {
+        for (let i = 0; i < 3; i++) {
+          const x = 16 + Math.round(r() * 32), y = 16 + Math.round(r() * 32), rr = 8 + Math.round(r() * 12);
+          s += '<circle cx="' + x + '" cy="' + y + '" r="' + rr + '" fill="' + (i === 1 ? "#FFFFFF" : light) + '" opacity="' + (i === 1 ? ".28" : ".7") + '"/>';
+        }
+        s += '<circle cx="' + (16 + Math.round(r() * 32)) + '" cy="' + (16 + Math.round(r() * 32)) + '" r="' + (6 + Math.round(r() * 8)) + '" fill="none" stroke="#FFFFFF" stroke-width="2.5" opacity=".6"/>';
+      }
+      s += "</svg>";
+      faceCache.set(key, s);
+      return s;
+    }
     const bg = pick(FACE_BG), skin = pick(FACE_SKIN), ink = "#2A2320";
     const shape = Math.floor(r() * 3), tilt = Math.round((r() - .5) * 22);
     const cx = 32 + Math.round((r() - .5) * 6), cy = 36 + Math.round(r() * 3);
     const eyes = Math.floor(r() * 4), mouth = Math.floor(r() * 5), extra = Math.floor(r() * 6);
     const st = 'stroke="' + ink + '" stroke-width="2.2" fill="none" stroke-linecap="round"';
-    let s = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="64" height="64" fill="' + bg + '"/><g transform="rotate(' + tilt + " " + cx + " " + cy + ')">';
+    let s = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + mixHex(bg, "#FFFFFF", .22) + '"/><stop offset="1" stop-color="' + mixHex(bg, "#000000", .1) + '"/></linearGradient></defs><rect width="64" height="64" fill="url(#' + gid + ')"/><g transform="rotate(' + tilt + " " + cx + " " + cy + ')">';
     if (extra === 1) s += '<path d="M' + (cx - 17) + " " + (cy - 9) + "L" + (cx - 13) + " " + (cy - 27) + "L" + (cx - 3) + " " + (cy - 18) + "ZM" + (cx + 17) + " " + (cy - 9) + "L" + (cx + 13) + " " + (cy - 27) + "L" + (cx + 3) + " " + (cy - 18) + 'Z" fill="' + skin + '"/>';
     if (extra === 2) s += '<circle cx="' + (cx - 14) + '" cy="' + (cy - 15) + '" r="6.5" fill="' + skin + '"/><circle cx="' + (cx + 14) + '" cy="' + (cy - 15) + '" r="6.5" fill="' + skin + '"/>';
     if (extra === 3) s += '<path d="M' + cx + " " + (cy - 19) + "Q" + (cx + 2) + " " + (cy - 26) + " " + (cx + 6) + " " + (cy - 28) + '" ' + st + '/><circle cx="' + (cx + 6.5) + '" cy="' + (cy - 28.5) + '" r="2.6" fill="' + ink + '"/>';
@@ -1076,8 +1132,10 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     else if (mouth === 2) s += '<path d="M' + (cx - 4) + " " + (my + 1) + "H" + (cx + 4) + '" ' + st + "/>";
     else if (mouth === 3) s += '<circle cx="' + cx + '" cy="' + (my + 1) + '" r="2.6" fill="' + ink + '"/>';
     else s += '<path d="M' + (cx - 5) + " " + my + "Q" + cx + " " + (my + 5) + " " + (cx + 5) + " " + my + '" ' + st + '/><path d="M' + (cx - 1) + " " + (my + 2.6) + 'q2 4 4 0" fill="#E86A6A"/>';
+    // a soft light on the face, the same for every face
+    s += '<ellipse cx="' + (cx - 7) + '" cy="' + (cy - 11) + '" rx="7" ry="4" fill="#FFFFFF" opacity=".28" transform="rotate(-25 ' + (cx - 7) + " " + (cy - 11) + ')"/>';
     s += "</g></svg>";
-    faceCache.set(seed, s);
+    faceCache.set(key, s);
     return s;
   }
 
@@ -1266,11 +1324,23 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     if (p && Number.isFinite(p.face)) return p.face >>> 0;
     return fnv(keyOf(nick));
   }
+  const faceStyleOf = (nick) => { const p = S.people.get(keyOf(nick)); return p && p.faceStyle ? p.faceStyle : "face"; };
+  const photoOf = (nick) => { const p = S.people.get(keyOf(nick)); return p && p.ava ? p.ava : ""; };
+  // what makes an avatar look the way it does: drawn rows are rebuilt when it changes
+  const avaKey = (nick) => faceSeed(nick) + faceStyleOf(nick) + photoOf(nick);
   function avatar(nick, size) {
     const a = h("div", "ava" + (size ? " " + size : ""));
     a.setAttribute("aria-hidden", "true");
-    if (nick == null) { a.classList.add("claude"); a.innerHTML = ICON.spark; }
-    else a.innerHTML = faceSVG(faceSeed(nick));
+    if (nick == null) { a.classList.add("claude"); a.innerHTML = ICON.spark; return a; }
+    const drawn = () => faceSVG(faceSeed(nick), faceStyleOf(nick), nick);
+    const ph = photoOf(nick);
+    if (ph) {
+      const img = new Image();
+      img.alt = ""; img.decoding = "async"; img.loading = "lazy";
+      img.onerror = () => { a.innerHTML = drawn(); };
+      img.src = blobUrl(ph);
+      a.append(img);
+    } else a.innerHTML = drawn();
     return a;
   }
   function agentAvatar(nick, size) {
@@ -1526,7 +1596,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
           if (!b || typeof b.nick !== "string") continue;
           const nick = clean(b.nick, 24);
           if (!nick) continue;
-          m.set(keyOf(nick), { nick, face: Number.isFinite(Number(b.face)) ? Number(b.face) >>> 0 : NaN, card: clean(b.card, 3000, true), updatedAt: Number(b.updatedAt) || 0, devices: deviceKeys(b.devices), prefs: b.prefs && typeof b.prefs === "object" && !Array.isArray(b.prefs) ? b.prefs : null, agent: normAgent(b.agent) });
+          m.set(keyOf(nick), { nick, face: Number.isFinite(Number(b.face)) ? Number(b.face) >>> 0 : NaN, card: clean(b.card, 3000, true), updatedAt: Number(b.updatedAt) || 0, devices: deviceKeys(b.devices), prefs: b.prefs && typeof b.prefs === "object" && !Array.isArray(b.prefs) ? b.prefs : null, agent: normAgent(b.agent), faceStyle: FACE_STYLES.includes(b.faceStyle) ? b.faceStyle : "face", ava: typeof b.ava === "string" && /^[0-9a-f]{32}$/.test(b.ava) ? b.ava : "" });
         }
         S.people = m;
         S.peopleLoaded = true;
@@ -1730,7 +1800,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       const ack = m.kind === "handoff" ? acks.get(m.id) || null : null;
       const rep = m.reply ? byId.get(m.reply) || null : null;
       const state = m.queued ? "q" : S.pending.has(m.id) ? "p" : S.failed.has(m.id) ? "f" : "s";
-      const key = ["m", m.id, m.kind === "fetch" ? fetchState(m).t : "", first ? 1 : 0, last ? 1 : 0, state, ack ? ack.id : "", isMine(m) ? 1 : 0, mentionsMe(m) ? 1 : 0, S.canWrite ? 1 : 0, S.nick, faceSeed(m.agentOf || m.nick), rep ? rep.id + faceSeed(rep.nick) + (rep.edited || "") : m.reply ? "gone" : "", S.downloads ? 1 : 0, m.kind === "handoff" ? S.canSend : "", listMode ? "L" : "B", rxKey(rx, m.id), m.edited || "", m.id === all.pinned ? "P" : "", q].join("|");
+      const key = ["m", m.id, m.kind === "fetch" ? fetchState(m).t : "", first ? 1 : 0, last ? 1 : 0, state, ack ? ack.id : "", isMine(m) ? 1 : 0, mentionsMe(m) ? 1 : 0, S.canWrite ? 1 : 0, S.nick, avaKey(m.agentOf || m.nick), rep ? rep.id + avaKey(rep.nick) + (rep.edited || "") : m.reply ? "gone" : "", S.downloads ? 1 : 0, m.kind === "handoff" ? S.canSend : "", listMode ? "L" : "B", rxKey(rx, m.id), m.edited || "", m.id === all.pinned ? "P" : "", q].join("|");
       try { frag.append(cached(key, used, () => (isBot(m) ? claudeEl(m, rep, rx.get(m.id)) : bubbleEl(m, first, last, ack, rep, rx.get(m.id))))); }
       catch (e) { cache.delete(key); used.delete(key); if (window.console) console.warn("message " + m.id + " not shown", e); }
     }
@@ -4772,24 +4842,94 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
 
   // ---------- profile ----------
   let pickSeeds = [], pickSel = 0, pickTouched = false;
+  // twelve choices: the current one, then faces, monograms and shapes
+  const PICK_STYLES = ["face", "face", "face", "face", "face", "face", "mono", "mono", "shape", "shape", "shape"];
   function seedsFor(nick, base) {
-    const a = [base];
+    const a = [base], seen = new Set([base.s]);
     let x = fnv(keyOf(nick) + ":" + Date.now());
-    while (a.length < 12) { x = Math.imul(x ^ (x >>> 13), 0x5bd1e995) >>> 0; if (!a.includes(x)) a.push(x); }
+    while (a.length < 12) { x = Math.imul(x ^ (x >>> 13), 0x5bd1e995) >>> 0; if (!seen.has(x)) { seen.add(x); a.push({ s: x, st: PICK_STYLES[a.length - 1] }); } }
     return a;
+  }
+  // an own photo: drawn into a 256 px square (the circle is the frame's), photos turned the way the camera held them
+  const PH = { ava: "", blob: null, url: "", sel: false, img: null, zoom: 1, ox: 0, oy: 0, drag: null };
+  const canPhoto = () => !!S.assets && S.canWrite && !S.guest;
+  function drawCrop() {
+    const cv = $("cropCanvas"), g = cv.getContext("2d"), C = cv.width, img = PH.img;
+    const base = Math.max(C / img.naturalWidth, C / img.naturalHeight), sc = base * PH.zoom;
+    const w = img.naturalWidth * sc, hh = img.naturalHeight * sc;
+    PH.ox = Math.min(0, Math.max(C - w, PH.ox));
+    PH.oy = Math.min(0, Math.max(C - hh, PH.oy));
+    g.clearRect(0, 0, C, C);
+    g.drawImage(img, PH.ox, PH.oy, w, hh);
+  }
+  function setZoom(z) {
+    const C = $("cropCanvas").width, img = PH.img;
+    const base = Math.max(C / img.naturalWidth, C / img.naturalHeight);
+    // the point in the middle stays in the middle
+    const cxI = (C / 2 - PH.ox) / (base * PH.zoom), cyI = (C / 2 - PH.oy) / (base * PH.zoom);
+    PH.zoom = z;
+    PH.ox = C / 2 - cxI * base * z;
+    PH.oy = C / 2 - cyI * base * z;
+    drawCrop();
+  }
+  async function loadPhoto(file) {
+    if (!/^image\//.test(file.type || "") && !/\.(jpe?g|png|webp|heic|heif|gif)$/i.test(file.name || "")) { notice("Это не картинка."); return; }
+    if (file.size > 30 * 1048576) { notice("Фото слишком большое."); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+    try { await img.decode(); } catch (_) { URL.revokeObjectURL(url); notice("Не получилось открыть это фото. Попробуй JPEG или PNG."); return; }
+    if (PH.img && PH.img.src.startsWith("blob:")) URL.revokeObjectURL(PH.img.src);
+    PH.img = img;
+    const C = $("cropCanvas").width, base = Math.max(C / img.naturalWidth, C / img.naturalHeight);
+    PH.zoom = 1;
+    PH.ox = (C - img.naturalWidth * base) / 2;
+    // a portrait photo starts a little above the middle, where faces usually are
+    PH.oy = img.naturalHeight > img.naturalWidth ? -(img.naturalHeight * base - C) * 0.3 : (C - img.naturalHeight * base) / 2;
+    $("cropZoom").value = "1";
+    $("cropBox").hidden = false;
+    drawCrop();
+  }
+  async function cropToBlob() {
+    const out = document.createElement("canvas"), N = 256, C = $("cropCanvas").width, k = N / C;
+    out.width = N; out.height = N;
+    const g = out.getContext("2d"), img = PH.img;
+    const sc = Math.max(C / img.naturalWidth, C / img.naturalHeight) * PH.zoom * k;
+    g.imageSmoothingQuality = "high";
+    g.drawImage(img, PH.ox * k, PH.oy * k, img.naturalWidth * sc, img.naturalHeight * sc);
+    const enc = (type, q) => new Promise((res) => out.toBlob((b) => res(b), type, q));
+    let b = await enc("image/webp", 0.86);
+    if (!b || b.type !== "image/webp") b = await enc("image/jpeg", 0.86);
+    if (b && b.size > 90000) b = await enc(b.type, 0.7);
+    return b;
   }
   function drawPick() {
     const box = $("facePick");
     box.replaceChildren();
-    pickSeeds.forEach((s, i) => {
-      const b = btn(null, null, "Аватарка " + (i + 1));
-      b.setAttribute("aria-pressed", i === pickSel ? "true" : "false");
-      const a = h("div", "ava");
-      a.innerHTML = faceSVG(s);
+    const photo = PH.url || (PH.ava ? blobUrl(PH.ava) : "");
+    if (photo) {
+      const b = btn(null, null, "Моё фото");
+      b.setAttribute("aria-pressed", PH.sel ? "true" : "false");
+      const a = h("div", "ava"), img = new Image();
+      img.alt = ""; img.src = photo;
+      a.append(img);
       b.append(a);
-      b.addEventListener("click", () => { pickSel = i; pickTouched = true; drawPick(); });
+      b.addEventListener("click", () => { PH.sel = true; drawPick(); });
+      box.append(b);
+    }
+    const nm = clean($("nickInput").value, 24) || S.nick || "?";
+    pickSeeds.slice(0, photo ? 11 : 12).forEach((o, i) => {
+      const b = btn(null, null, "Аватарка " + (i + 1));
+      b.setAttribute("aria-pressed", !PH.sel && i === pickSel ? "true" : "false");
+      const a = h("div", "ava");
+      a.innerHTML = faceSVG(o.s, o.st, nm);
+      b.append(a);
+      b.addEventListener("click", () => { PH.sel = false; pickSel = i; pickTouched = true; drawPick(); });
       box.append(b);
     });
+    $("photoRow").hidden = !canPhoto();
+    $("photoRemove").hidden = !photo;
   }
   function openProfile() {
     S.needWho = false;
@@ -4804,8 +4944,12 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     $("nickErr").hidden = true;
     const p = S.people.get(keyOf(S.nick));
     $("cardInput").value = p ? p.card : "";
-    pickSeeds = seedsFor(S.nick || "новенький", S.nick ? faceSeed(S.nick) : fnv(String(Date.now())));
+    pickSeeds = seedsFor(S.nick || "новенький", S.nick ? { s: faceSeed(S.nick), st: faceStyleOf(S.nick) } : { s: fnv(String(Date.now())), st: "face" });
     pickSel = 0;
+    if (PH.url) URL.revokeObjectURL(PH.url);
+    Object.assign(PH, { ava: S.nick ? photoOf(S.nick) : "", blob: null, url: "", img: null });
+    PH.sel = !!PH.ava;
+    $("cropBox").hidden = true;
     drawPick();
     drawWho();
     $("profileCancel").textContent = first ? "Пока посмотреть" : "Отмена";
@@ -4821,21 +4965,32 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     // a known nick typed again on an emptied device keeps its spelling, face and card unless they were changed here
     const back = !S.nick && !S.guest && prev;
     const nick = back ? prev.nick : typedNick;
-    const face = back && !pickTouched && Number.isFinite(prev.face) ? prev.face : pickSeeds[pickSel] >>> 0;
+    const keepOld = back && !pickTouched && Number.isFinite(prev.face);
+    const face = keepOld ? prev.face : pickSeeds[pickSel].s >>> 0;
+    const faceStyle = keepOld ? prev.faceStyle || "face" : pickSeeds[pickSel].st;
+    // the photo goes up first; if it cannot, the profile is saved with the drawn avatar
+    let ava = keepOld && !PH.blob ? prev.ava || "" : PH.sel ? PH.ava : "";
+    if (PH.sel && PH.blob && canPhoto()) {
+      const sb = $("profileForm").querySelector('button[type="submit"]');
+      sb.disabled = true; sb.textContent = "Загружаю фото…";
+      try { const r = await S.assets.upload(PH.blob, { type: PH.blob.type }); ava = r.id; }
+      catch (e) { notice("Фото не загрузилось: " + uploadMessage(e)); ava = prev && prev.ava ? prev.ava : ""; }
+      sb.disabled = false; sb.textContent = "Готово";
+    }
     const typed = clean($("cardInput").value, 3000, true);
     const card = back && !typed ? prev.card : typed;
     const now = Date.now();
     S.nick = nick;
     ls.set("chat.nick", nick);
     if (back) restorePrefs(prev);
-    S.people.set(keyOf(nick), { nick, face, card, updatedAt: now, devices: prev ? [...new Set(prev.devices.concat(DEVICE))] : [DEVICE], prefs: prev ? prev.prefs : null, agent: prev ? prev.agent : null });
+    S.people.set(keyOf(nick), { nick, face, faceStyle, ava, card, updatedAt: now, devices: prev ? [...new Set(prev.devices.concat(DEVICE))] : [DEVICE], prefs: prev ? prev.prefs : null, agent: prev ? prev.agent : null });
     S.deviceSent = keyOf(nick);
     $("profileBox").hidden = true;
     syncMe(); pushPresence(); render(); renderPanel();
     $("text").focus();
     if (S.db && S.canWrite) {
       const ref = S.db.doc("people/" + pid(nick));
-      const data = { nick, face, card, updatedAt: now, devices: { [DEVICE]: now } };
+      const data = { nick, face, faceStyle, ava, card, updatedAt: now, devices: { [DEVICE]: now } };
       // update keeps the devices and prefs other devices saved; set only creates a new person
       try { if (prev) await ref.update(data); else await ref.set(data); }
       catch (e) {
@@ -5391,7 +5546,33 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     });
 
     $("meBtn").addEventListener("click", openProfile);
-    $("faceMore").addEventListener("click", () => { pickSeeds = seedsFor(String(Math.random()), pickSeeds[pickSel]); pickSel = 0; pickTouched = true; drawPick(); });
+    $("faceMore").addEventListener("click", () => { pickSeeds = seedsFor(String(Math.random()), pickSeeds[pickSel]); pickSel = 0; PH.sel = false; pickTouched = true; drawPick(); });
+    $("photoInput").addEventListener("change", () => { const i = $("photoInput"), f = i.files && i.files[0]; i.value = ""; if (f) loadPhoto(f); });
+    $("photoRemove").addEventListener("click", () => { if (PH.url) URL.revokeObjectURL(PH.url); Object.assign(PH, { ava: "", blob: null, url: "", sel: false }); pickTouched = true; drawPick(); });
+    $("cropZoom").addEventListener("input", () => setZoom(Number($("cropZoom").value) || 1));
+    $("cropCancel").addEventListener("click", () => { $("cropBox").hidden = true; });
+    $("cropOk").addEventListener("click", async () => {
+      const b = await cropToBlob();
+      if (!b) { notice("Не получилось подготовить фото."); return; }
+      if (PH.url) URL.revokeObjectURL(PH.url);
+      Object.assign(PH, { blob: b, url: URL.createObjectURL(b), sel: true });
+      $("cropBox").hidden = true;
+      pickTouched = true;
+      drawPick();
+    });
+    const cv = $("cropCanvas");
+    cv.addEventListener("pointerdown", (e) => { if (!PH.img) return; cv.setPointerCapture(e.pointerId); PH.drag = { x: e.clientX, y: e.clientY }; });
+    cv.addEventListener("pointermove", (e) => {
+      if (!PH.drag) return;
+      const k = cv.width / cv.getBoundingClientRect().width;
+      PH.ox += (e.clientX - PH.drag.x) * k; PH.oy += (e.clientY - PH.drag.y) * k;
+      PH.drag = { x: e.clientX, y: e.clientY };
+      drawCrop();
+    });
+    const stopDrag = () => { PH.drag = null; };
+    cv.addEventListener("pointerup", stopDrag);
+    cv.addEventListener("pointercancel", stopDrag);
+    $("nickInput").addEventListener("input", () => { if (!$("profileBox").hidden) drawPick(); });
     $("profileCancel").addEventListener("click", closeProfile);
     $("profileBox").addEventListener("click", (e) => { if (e.target === $("profileBox")) closeProfile(); });
     $("profileBox").addEventListener("keydown", (e) => { if (e.key === "Escape") closeProfile(); });

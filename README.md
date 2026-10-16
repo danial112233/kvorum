@@ -18,6 +18,7 @@ When several people sign in to Claude with the same login, they share one conver
 - Discord-style channels and groups: a list on the left, unread and mention counts per channel. A group is visible only to its members.
 - Voice channels: "Join" opens the call in Jitsi Meet in a new tab, and the chat shows who is in the channel. The (i) button next to "Voice" explains how it works.
 - Photos, videos and files.
+- Avatars: your own photo (cropped to a circle right in the profile) or a drawn one: faces, letters, shapes.
 - Voice notes: a waveform player with a text transcript under it (see Limitations about the microphone).
 - Video circles: round video notes up to a minute. After recording, the circle shows above the input. "Send" shrinks it to a 480 px square MP4, with a ring that shows the progress. If the browser can't shrink video, a clip up to 20 MB goes as it is. In the feed circles loop silently and play with sound on tap.
 - Guests from other accounts: they read everything and write text, and their nickname always ends in "(гость)", "guest" (see "Invite people from another account").
