@@ -522,6 +522,19 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
 .chvc { position: absolute; right: -4px; bottom: -3px; padding: 1px 3px; border-radius: var(--r-f); background: var(--surface); box-shadow: 0 0 0 1px var(--line); font-size: 10px; line-height: 1.1; }
 .vbar .rowv { display: flex; flex-wrap: wrap; gap: 6px; }
 .vbar .btn { flex: 1 1 auto; width: auto; height: 30px; padding: 0 8px; font-size: var(--t-xs); }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.call-card { gap: 12px; }
+.call-card .btn { width: 100%; height: 44px; font-size: var(--t-base); }
+.call-link { display: flex; gap: 8px; }
+.call-link .field { flex: 1; min-width: 0; font-size: var(--t-xs); color: var(--muted); }
+.call-link .btn { width: auto; height: auto; font-size: var(--t-sm); }
+.callbar { border-top: 1px solid var(--line); background: var(--accent-soft); }
+.callbar .col { display: flex; align-items: center; gap: 10px; padding-block: 6px; }
+.callbar .cb-t { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.callbar .cb-t b, .callbar .cb-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.callbar .cb-t b { font-size: var(--t-sm); font-weight: 600; color: var(--online); }
+.callbar .cb-t small { font-size: var(--t-xs); color: var(--muted); }
+.callbar .btn { flex: none; height: 30px; padding: 0 12px; font-size: var(--t-xs); }
 /* Помощь: короткие раскрывающиеся разделы */
 .help { display: grid; gap: 8px; }
 .help details { border-radius: 12px; background: var(--surface-2); }
@@ -716,6 +729,13 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
           <button class="xbtn" type="button" id="searchClose" aria-label="Закрыть поиск">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
+        </div>
+      </div>
+      <div class="callbar" id="callBar" hidden>
+        <div class="col">
+          <span class="cb-t"><b id="callBarName"></b><small>звонок в Jitsi</small></span>
+          <button class="btn" type="button" id="callBarBack">Вернуться в звонок</button>
+          <button class="btn sec" type="button" id="callBarLeave">Выйти</button>
         </div>
       </div>
       <div class="pinbar" id="pinBar" hidden>
@@ -916,6 +936,18 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     <div class="p-body" id="setPane" hidden></div>
     <div class="p-body" id="helpPane" hidden></div>
   </aside>
+</div>
+
+<div class="overlay" id="callBox" hidden>
+  <div class="card call-card" role="dialog" aria-labelledby="callTitle">
+    <h2 id="callTitle">Звонок</h2>
+    <p>Звук и камера — в Jitsi Meet. Здесь видно, кто в канале.</p>
+    <a class="btn" id="callWeb" href="#" target="_blank" rel="noopener noreferrer">Открыть звонок</a>
+    <a class="btn sec" id="callApp" href="#" target="_blank" rel="noopener noreferrer">Открыть в приложении Jitsi Meet</a>
+    <div class="call-link"><input class="field" id="callUrl" readonly aria-label="Ссылка на звонок"><button class="btn sec" type="button" id="callCopy">Скопировать</button></div>
+    <p class="set-note">Ничего не открылось? Нажми и подержи «Открыть звонок» и выбери «Открыть» или «Скопировать», либо скопируй ссылку и вставь её в Safari. Если стоит приложение Jitsi Meet, удобнее в нём.</p>
+    <div class="rowb"><button class="btn sec" type="button" id="callClose">Закрыть</button></div>
+  </div>
 </div>
 
 <div class="overlay" id="profileBox" hidden>
@@ -1363,8 +1395,18 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     clearTimeout(noticeTimer);
     if (!sticky) noticeTimer = setTimeout(() => { $("notice").hidden = true; }, 9000);
   }
+  function copyByHand(text) {
+    const t = document.createElement("textarea");
+    t.value = text; t.setAttribute("readonly", ""); t.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.append(t);
+    t.select(); t.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (_) { ok = false; }
+    t.remove();
+    return ok;
+  }
   function copyText(text, b, done) {
-    const p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject();
+    const p = (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject()).catch(() => (copyByHand(text) ? undefined : Promise.reject()));
     p.then(() => {
       if (!b) return;
       const was = b.textContent;
@@ -3763,7 +3805,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     ["Как пригласить человека", "Владелец чата нажимает «Поделиться» вверху страницы, приглашает человека по почте и выбирает роль «Наблюдатель» или «Комментатор». Доступ по ссылке оставь выключенным. Роль «Редактор» не давай: с ней можно менять саму страницу чата."],
     ["Гости", "Гость читает всё: каналы, группы, память, карточки и ссылки на звонки. Пишет он только текстом и только в #общий и открытые каналы, а у его ника всегда стоит «(гость)»; ник, похожий на чужой или на Claude, становится просто «Гость». Платформа не даёт гостям писать в базу чата, поэтому их текст переносит открытый чат участника: пока чат не открыт на экране хотя бы у одного участника, у гостя стоит «в очереди». В голосовые каналы гости входят как все, с пометкой «(гость)»; голосовые сообщения, кружки и файлы им недоступны."],
     ["Каналы и группы", "Каналы — в списке слева (на телефоне — кнопка ☰). «+ Канал или группа» создаёт новый. Группа видна в списке только её участникам, но это порядок, а не защита: вход общий, а гости читают всё. Ненужный канал можно скрыть у всех и потом вернуть."],
-    ["Голосовые каналы", "«Войти» у канала в разделе «Голосовые» открывает звонок в новой вкладке Jitsi Meet: звук и камера там, а здесь видно, кто внутри. Выйти — кнопкой «Выйти» или закрыв вкладку звонка. Jitsi может попросить того, кто начинает звонок, войти через Google или GitHub."],
+    ["Голосовые каналы", "«Войти» у канала в разделе «Голосовые» открывает звонок в Jitsi Meet: звук и камера там, а здесь видно, кто внутри. На телефоне появится окно со ссылками: «Открыть звонок» в браузере или «Открыть в приложении Jitsi Meet», если оно стоит; если ничего не открылось, скопируй ссылку в Safari. Выйти — кнопкой «Выйти» или закрыв вкладку звонка. Jitsi может попросить того, кто начинает звонок, войти через Google или GitHub."],
     ["Голосовые сообщения и кружки", "Кнопка микрофона. На телефоне в меню «Записать голосовое» и «Записать кружок». iPhone даёт записать звук в чате только через камеру: у голосового картинка не сохраняется, камеру можно закрыть пальцем. Кружок — круглое видео до минуты: после записи он покажется над полем ввода, нажми «Отправить». Пока он сжимается, по кольцу видно, сколько осталось. Если браузер не умеет сжимать, ролик до 20 МБ уйдёт как есть. На компьютере выбери запись, а кружок — через скрепку."],
     ["Мой агент", "Где: строка «Мой агент» вверху слева. Это личный помощник каждого участника.\nЧто умеет: пересказать каналы, написать черновик, перевести, составить план, запомнить заметку.\nВ чат сам не пишет: черновик ты отправляешь кнопкой «Отправить».\nНа чём работает: на твоём Claude, видит только те каналы, которые видишь ты.\nНапоминания: это заметки, их видно, когда откроешь агента.\nЧужой агент: напиши @ник-агент.\nКто видит разговор: ты и свои под общим входом, гости нет. У гостей агента нет."],
     ["Файлы с компьютера коллеги", "Попросить: «Команда» → «Попросить файл» у человека → напиши, какой файл нужен.\nКто отправляет: только хозяин компьютера. Запрос приходит в его Claude Code, он сам называет файл и подтверждает.\nВключить у себя (бета): пока лучше не включать. Если очень нужно: папки задаёшь сам в Терминале, а Claude Code на своём компьютере говоришь «включи выдачу файлов в нашем чате». Работает, пока компьютер включён и сессия открыта.\nНикогда не уходят: ключи, пароли, токены, скрытые и системные файлы, а также файлы и архивы, внутри которых похоже на ключ или пароль.\nСтатусы под запросом: ждёт подтверждения · компьютер не в сети · отказано · отправлено · истёк (через сутки).\nКто видит файл: все в канале, гости тоже. Гости и агенты просить файлы не могут."],
@@ -4522,6 +4564,8 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     const c = S.voiceCh && S.channels.get(S.voiceCh);
     $("vbar").hidden = !c;
     if (c) $("vbarName").textContent = "Ты в 🔊 " + c.name;
+    $("callBar").hidden = !c;
+    if (c) $("callBarName").textContent = "Ты в 🔊 " + c.name;
     let n = 0;
     for (const m of vm.values()) n += m.size;
     const t = n ? "Каналы · в голосовом: " + n : "Каналы и группы";
@@ -4554,7 +4598,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     if (!$("notice").hidden) { setTimeout(voiceHint, 9000); return; }
     ls.set("chat.vcHint", "1");
     const phone = window.innerWidth < 800;
-    notice("Новое: голосовые каналы. Они в списке слева, в разделе «Голосовые»" + (phone ? " (на телефоне — кнопка ☰ вверху)" : "") + ". «Войти» откроет звонок в новой вкладке, а остальные увидят тебя в канале.", true, phone ? { label: "Показать", fn: openSide } : null);
+    notice("Новое: голосовые каналы. Они в списке слева, в разделе «Голосовые»" + (phone ? " (на телефоне — кнопка ☰ вверху)" : "") + ". «Войти» откроет звонок в Jitsi Meet, а остальные увидят тебя в канале.", true, phone ? { label: "Показать", fn: openSide } : null);
   }
   // the call tab, watched: closing it leaves the channel (a tab handed to the system browser reads closed at once and is not watched)
   let callTimer = 0;
@@ -4577,7 +4621,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     if (!S.nick) { openProfile(); return; }
     if (!S.db || !S.canWrite) { notice("С этого входа голосовой канал не создать: попроси участника войти первым."); return; }
     let w = null;
-    try { w = window.open("", "_blank"); } catch (_) { w = null; }
+    if (!TOUCH) { try { w = window.open("", "_blank"); } catch (_) { w = null; } }
     const ref = S.db.doc("channels/" + VC_DEFAULT);
     let room = "";
     try {
@@ -4589,8 +4633,36 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     if (!S.channels.has(VC_DEFAULT)) S.channels.set(VC_DEFAULT, Object.assign(vcDefault(), { by: S.nick, at: Date.now(), room }));
     enterVoice(VC_DEFAULT, w);
   }
-  function jitsiUrl(c) {
-    return "https://meet.jit.si/" + c.room + "#config.prejoinPageEnabled=false&config.disableDeepLinking=true&userInfo.displayName=" + encodeURIComponent(JSON.stringify(S.guest ? clean(S.nick || "Гость", 15) + " (гость)" : S.nick || "Гость"));
+  // the web link stays in the browser; the app link hands the call to Jitsi Meet when it is installed
+  function jitsiUrl(c, app) {
+    const name = encodeURIComponent(JSON.stringify(S.guest ? clean(S.nick || "Гость", 15) + " (гость)" : S.nick || "Гость"));
+    return app ? "org.jitsi.meet://meet.jit.si/" + c.room + "#userInfo.displayName=" + name
+      : "https://meet.jit.si/" + c.room + "#config.prejoinPageEnabled=false&config.disableDeepLinking=true&userInfo.displayName=" + name;
+  }
+  // A phone app's web view often opens no new window for a script; a real link the finger lands on is the surest way
+  // out, so on touch screens the call opens from a sheet of links.
+  let callSheetCh = "", callSheetAt = 0;
+  function showCallSheet(c) {
+    callSheetCh = c.id;
+    callSheetAt = performance.now();
+    $("callTitle").textContent = "🔊 " + c.name;
+    $("callWeb").href = jitsiUrl(c);
+    $("callApp").href = jitsiUrl(c, true);
+    $("callUrl").value = jitsiUrl(c);
+    $("callBox").hidden = false;
+  }
+  function closeCallSheet() { $("callBox").hidden = true; }
+  // you count as in the channel from the tap that opens the call
+  function markInVoice(id) {
+    if (S.voiceCh === id) return;
+    S.voiceCh = id;
+    pushPresence();
+    writeVoice();
+    clearInterval(S.voiceBeat);
+    S.voiceBeat = setInterval(writeVoice, VC_BEAT);
+    S.sideKey = "";
+    renderPeople();
+    render();
   }
   // must run straight from the tap: the browser opens a new tab only from a gesture
   function openCall(c, pre) {
@@ -4601,7 +4673,14 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     trackCall(w);
     const copy = { label: "Скопировать ссылку", fn: () => copyText(url, null) };
     if (w) notice("Звонок открылся в новой вкладке Jitsi: звук там, а здесь видно, кто в канале. В первый раз Jitsi может попросить войти через Google или GitHub того, кто начинает звонок.", true, copy);
-    else notice("Вкладка со звонком не открылась. Скопируй ссылку и открой её в браузере: звук будет там, а здесь видно, кто в канале.", true, copy);
+    else showCallSheet(c);
+  }
+  function backToCall() {
+    const c = S.channels.get(S.voiceCh);
+    if (!c) return;
+    if (TOUCH) { showCallSheet(c); return; }
+    if (S.callWin && !S.callWin.closed) { try { S.callWin.focus(); return; } catch (_) {} }
+    openCall(c, null);
   }
   function writeVoice() {
     // a guest cannot write: the room presence alone shows them in the channel
@@ -4627,16 +4706,9 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   function enterVoice(id, pre) {
     const c = S.channels.get(id);
     if (!c) return;
+    if (TOUCH && !pre) { showCallSheet(c); return; }
     openCall(c, pre);
-    if (S.voiceCh === id) return;
-    S.voiceCh = id;
-    pushPresence();
-    writeVoice();
-    clearInterval(S.voiceBeat);
-    S.voiceBeat = setInterval(writeVoice, VC_BEAT);
-    S.sideKey = "";
-    renderPeople();
-    render();
+    markInVoice(id);
   }
   function leaveVoice() {
     if (!S.voiceCh) return;
@@ -5466,6 +5538,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     for (const id of ["audioFile", "voiceCam", "voicePick"]) $(id).addEventListener("change", () => takeVoiceFile($(id)));
     document.addEventListener("click", (e) => { if (!$("voiceMenu").hidden && !e.target.closest("#voiceMenu, #micBtn")) closeVoiceMenu(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("voiceMenu").hidden) closeVoiceMenu(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("callBox").hidden) closeCallSheet(); });
     $("recCancel").addEventListener("click", () => stopRec(false));
     $("recSend").addEventListener("click", () => stopRec(true));
     $("recBar").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); stopRec(false); } });
@@ -5514,14 +5587,18 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
       if (b) pickRow(rowKey(b));
     });
     $("chKindVc").addEventListener("click", () => { chDraft.kind = "voice"; drawChKind(); });
-    $("vOpen").addEventListener("click", () => {
-      const c = S.channels.get(S.voiceCh);
-      if (!c) return;
-      if (S.callWin && !S.callWin.closed) { try { S.callWin.focus(); return; } catch (_) {} }
-      openCall(c, null);
-    });
+    $("vOpen").addEventListener("click", () => { closeSide(); backToCall(); });
     $("vEdit").addEventListener("click", () => { closeSide(); if (S.voiceCh) openChannelForm(S.voiceCh); });
     $("vLeave").addEventListener("click", leaveVoice);
+    $("callBarBack").addEventListener("click", backToCall);
+    $("callBarLeave").addEventListener("click", leaveVoice);
+    $("callClose").addEventListener("click", closeCallSheet);
+    // the sheet opens on the finger lifting, and the click that follows lands on it: that one is not a tap on the sheet
+    const sheetGhost = () => performance.now() - callSheetAt < 500;
+    $("callBox").addEventListener("click", (e) => { if (e.target === $("callBox") && !sheetGhost()) closeCallSheet(); });
+    // the links do the opening themselves; the page only notes that you went in
+    for (const id of ["callWeb", "callApp"]) $(id).addEventListener("click", (e) => { if (sheetGhost()) { e.preventDefault(); return; } if (callSheetCh) markInVoice(callSheetCh); setTimeout(closeCallSheet, 400); });
+    $("callCopy").addEventListener("click", () => { const i = $("callUrl"); copyText(i.value, $("callCopy"), "Скопировано"); i.select(); });
     window.addEventListener("pagehide", () => { if (S.voiceCh && S.db && S.nick) { try { S.db.doc("voice/" + pid(S.nick)).delete().catch(() => {}); } catch (_) {} } });
     // voice entries expire on their own; redraw now and then so a stale one leaves the list
     setInterval(() => { if (S.voiceDocs.size) { S.sideKey = ""; renderPeople(); render(); } }, 30000);

@@ -16,7 +16,7 @@ When several people sign in to Claude with the same login, they share one conver
 
 - Telegram-style messaging: replies, reactions, pinned message, search, editing your own messages, color themes. On a phone, message actions open on a long press.
 - Discord-style channels and groups: a list on the left, unread and mention counts per channel. A group is visible only to its members.
-- Voice channels: "Join" opens the call in Jitsi Meet in a new tab, and the chat shows who is in the channel. The (i) button next to "Voice" explains how it works.
+- Voice channels: "Join" opens the call in Jitsi Meet (on a computer in a new tab; on a phone from a small sheet of links, in the browser or in the Jitsi Meet app), the chat shows who is in the channel, and a bar above the feed offers "Back to the call · Leave". The (i) button next to "Voice" explains how it works.
 - Photos, videos and files.
 - Avatars: your own photo (cropped to a circle right in the profile) or a drawn one: faces, letters, shapes.
 - Voice notes: a waveform player with a text transcript under it (see Limitations about the microphone).
@@ -84,7 +84,7 @@ For voice notes from Claude Code these help but are optional:
 | What | Why | What to do |
 |---|---|---|
 | No recording from the microphone | Claude doesn't give artifact pages microphone access | On a phone, "Record a voice note": an iPhone films a short clip, and only its sound goes to the chat; Android opens its voice recorder. On a computer, pick an audio file. If the platform opens the microphone later, the button will record directly |
-| A voice channel is a Jitsi tab | The page can't carry sound | The call happens in Jitsi Meet (meet.jit.si). Jitsi may ask whoever starts the call to sign in with Google or GitHub. The room link is permanent and long, but anyone who has it can join |
+| A voice channel is a Jitsi tab | The page can't carry sound | The call happens in Jitsi Meet (meet.jit.si). Jitsi may ask whoever starts the call to sign in with Google or GitHub. The room link is permanent and long, but anyone who has it can join. In the Claude iPhone app the call opens from a link in a small sheet; if nothing opens, long-press the link or copy it into Safari |
 | A circle is shrunk only after "Send" | In the Claude app on a phone, a video can start only from a tap | Tap "Send" and wait for the ring. If the browser can't shrink video, a clip up to 20 MB goes as it is; for a longer one, record a shorter clip |
 | iPhone voice notes are stored as base64 m4a | The storage doesn't accept an audio-only MP4 | Nothing to do: the player fetches recordings ahead of time, so an iPhone plays right on tap |
 | The page can't transcribe speech | Artifacts have no speech recognition | Transcripts come from Claude Code on a computer that has `stt` |
