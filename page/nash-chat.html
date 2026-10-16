@@ -3691,7 +3691,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
   const HELP = [
     ["Что это", "Общий мессенджер внутри Claude для тех, кто входит под одним аккаунтом, и для приглашённых гостей. Сообщения подписываются ником, который каждый выбирает на своём устройстве. Аккаунт общий, поэтому подписаться можно любым ником: чат рассчитан на своих."],
     ["Как пригласить человека", "Владелец чата нажимает «Поделиться» вверху страницы, приглашает человека по почте и выбирает роль «Наблюдатель» или «Комментатор». Доступ по ссылке оставь выключенным. Роль «Редактор» не давай: с ней можно менять саму страницу чата."],
-    ["Гости", "Гость читает всё: каналы, группы, память, карточки и ссылки на звонки. Пишет он только текстом и только в #общий и открытые каналы, а у его ника всегда стоит «(гость)»; ник, похожий на чужой или на Claude, становится просто «Гость». Платформа не даёт гостям писать в базу чата, поэтому их текст переносит открытый чат участника: пока чат не открыт на экране хотя бы у одного участника, у гостя стоит «в очереди». Голосовые, кружки и файлы гостям недоступны."],
+    ["Гости", "Гость читает всё: каналы, группы, память, карточки и ссылки на звонки. Пишет он только текстом и только в #общий и открытые каналы, а у его ника всегда стоит «(гость)»; ник, похожий на чужой или на Claude, становится просто «Гость». Платформа не даёт гостям писать в базу чата, поэтому их текст переносит открытый чат участника: пока чат не открыт на экране хотя бы у одного участника, у гостя стоит «в очереди». В голосовые каналы гости входят как все, с пометкой «(гость)»; голосовые сообщения, кружки и файлы им недоступны."],
     ["Каналы и группы", "Каналы — в списке слева (на телефоне — кнопка ☰). «+ Канал или группа» создаёт новый. Группа видна в списке только её участникам, но это порядок, а не защита: вход общий, а гости читают всё. Ненужный канал можно скрыть у всех и потом вернуть."],
     ["Голосовые каналы", "«Войти» у канала в разделе «Голосовые» открывает звонок в новой вкладке Jitsi Meet: звук и камера там, а здесь видно, кто внутри. Выйти — кнопкой «Выйти» или закрыв вкладку звонка. Jitsi может попросить того, кто начинает звонок, войти через Google или GitHub."],
     ["Голосовые сообщения и кружки", "Кнопка микрофона. На телефоне в меню «Записать голосовое» и «Записать кружок». iPhone даёт записать звук в чате только через камеру: у голосового картинка не сохраняется, камеру можно закрыть пальцем. Кружок — круглое видео до минуты: после записи он покажется над полем ввода, нажми «Отправить». Пока он сжимается, по кольцу видно, сколько осталось. Если браузер не умеет сжимать, ролик до 20 МБ уйдёт как есть. На компьютере выбери запись, а кружок — через скрепку."],
@@ -4520,7 +4520,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     enterVoice(VC_DEFAULT, w);
   }
   function jitsiUrl(c) {
-    return "https://meet.jit.si/" + c.room + "#config.prejoinPageEnabled=false&config.disableDeepLinking=true&userInfo.displayName=" + encodeURIComponent(JSON.stringify(S.nick || "Гость"));
+    return "https://meet.jit.si/" + c.room + "#config.prejoinPageEnabled=false&config.disableDeepLinking=true&userInfo.displayName=" + encodeURIComponent(JSON.stringify(S.guest ? clean(S.nick || "Гость", 15) + " (гость)" : S.nick || "Гость"));
   }
   // must run straight from the tap: the browser opens a new tab only from a gesture
   function openCall(c, pre) {
@@ -4534,16 +4534,22 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
     else notice("Вкладка со звонком не открылась. Скопируй ссылку и открой её в браузере: звук будет там, а здесь видно, кто в канале.", true, copy);
   }
   function writeVoice() {
-    if (!S.db || !S.canWrite || !S.nick) return;
+    // a guest cannot write: the room presence alone shows them in the channel
+    if (!S.db || !S.canWrite || S.guest || !S.nick) return;
     const ref = S.db.doc("voice/" + pid(S.nick));
     (S.voiceCh ? ref.set({ nick: S.nick, ch: S.voiceCh, at: Date.now() }) : ref.delete()).catch(() => {});
   }
   function joinVoice(id) {
-    if (id === VC_DEFAULT && !S.channels.has(id)) { closeSide(); joinDefaultVoice(); return; }
+    if (id === VC_DEFAULT && !S.channels.has(id)) {
+      closeSide();
+      if (S.guest || !S.canWrite) { notice("Голосовой канал «Общий» ещё не открыт: его открывает первый участник чата. Как только он войдёт, сможешь войти и ты."); return; }
+      joinDefaultVoice();
+      return;
+    }
     const c = S.channels.get(id);
     if (!c || c.kind !== "voice") return;
     closeSide();
-    if (c.archived) { openChannelForm(id); return; }
+    if (c.archived) { if (S.guest || !S.canWrite) notice("Этот голосовой канал скрыт."); else openChannelForm(id); return; }
     if (!S.nick) { openProfile(); return; }
     if (!c.room) { notice("У этого голосового канала нет комнаты для звонка. Создай канал заново."); return; }
     enterVoice(id, null);
@@ -5444,6 +5450,7 @@ mark.hl { background: var(--accent-soft); color: inherit; border-radius: 3px; bo
         renderPeople();
         scheduleScan();
         relayGuests(ch.peers);
+        render();
       }, () => { S.peers = []; S.peersAt = 0; renderPeople(); });
       pushPresence();
       if (!S.canWrite) enterGuest();
